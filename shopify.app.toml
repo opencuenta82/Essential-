@@ -4,11 +4,12 @@
 client_id = "b79e2fb8bcb7a5671f55e60712f610c2"
 name = "Essential_v1"
 handle = "essential-v1"
-application_url = "https://essential-production.up.railway.app/"
+application_url = "https://shakira-backgrounds-customize-sells.trycloudflare.com"
 embedded = true
 
 [build]
 include_config_on_deploy = true
+automatically_update_urls_on_dev = true
 
 [webhooks]
 api_version = "2025-04"
@@ -26,10 +27,7 @@ api_version = "2025-04"
 scopes = "write_products,read_products,write_orders,read_orders"
 
 [auth]
-redirect_urls = [ 
-  "https://essential-production.up.railway.app/api/auth",
-  "https://essential-production.up.railway.app/auth/callback"
-]
+redirect_urls = ["https://shakira-backgrounds-customize-sells.trycloudflare.com/auth/callback", "https://shakira-backgrounds-customize-sells.trycloudflare.com/auth/shopify/callback", "https://shakira-backgrounds-customize-sells.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false

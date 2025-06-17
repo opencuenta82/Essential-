@@ -1,9 +1,10 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "b6fb9fbd34fdddbd764236e6b7cda175"
-name = "Essential"
-handle = "essential-1"
-application_url = "https://example.com/"
+# ✅ CREDENCIALES DE Essential_v1 (de tus imágenes)
+client_id = "b79e2fb8bcb7a5671f55e60712f610c2"
+name = "Essential_v1"
+handle = "essential-v1"
+application_url = "https://essential-production.up.railway.app/"
 embedded = true
 
 [build]
@@ -22,10 +23,13 @@ api_version = "2025-04"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products"
+scopes = "write_products,read_products,write_orders,read_orders"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ 
+  "https://essential-production.up.railway.app/api/auth",
+  "https://essential-production.up.railway.app/auth/callback"
+]
 
 [pos]
 embedded = false

@@ -1,33 +1,32 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-# ✅ CREDENCIALES DE Essential_v1 (de tus imágenes)
 client_id = "b79e2fb8bcb7a5671f55e60712f610c2"
 name = "Essential_v1"
 handle = "essential-v1"
-application_url = "https://shakira-backgrounds-customize-sells.trycloudflare.com"
+application_url = "https://mountains-upset-amounts-dumb.trycloudflare.com"
 embedded = true
 
 [build]
-include_config_on_deploy = true
 automatically_update_urls_on_dev = true
+include_config_on_deploy = true
 
 [webhooks]
 api_version = "2025-04"
 
   [[webhooks.subscriptions]]
-  topics = [ "app/uninstalled" ]
-  uri = "/webhooks/app/uninstalled"
+  topics = [ "app/scopes_update" ]
+  uri = "https://landscapes-strengths-spin-outcome.trycloudflare.com/webhooks/app/scopes_update"
 
   [[webhooks.subscriptions]]
-  topics = [ "app/scopes_update" ]
-  uri = "/webhooks/app/scopes_update"
+  topics = [ "app/uninstalled" ]
+  uri = "https://landscapes-strengths-spin-outcome.trycloudflare.com/webhooks/app/uninstalled"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products,read_products,write_orders,read_orders"
+scopes = "read_orders,read_products,write_orders,write_products"
 
 [auth]
-redirect_urls = ["https://shakira-backgrounds-customize-sells.trycloudflare.com/auth/callback", "https://shakira-backgrounds-customize-sells.trycloudflare.com/auth/shopify/callback", "https://shakira-backgrounds-customize-sells.trycloudflare.com/api/auth/callback"]
+redirect_urls = ["https://mountains-upset-amounts-dumb.trycloudflare.com/auth/callback", "https://mountains-upset-amounts-dumb.trycloudflare.com/auth/shopify/callback", "https://mountains-upset-amounts-dumb.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false

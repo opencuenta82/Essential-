@@ -26,7 +26,7 @@ async function startServer() {
   app.all("*", remixHandler);
 
   // Configurar puerto y host para Railway
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 8080;
   const host = process.env.HOST || "0.0.0.0";
 
   app.listen(port, host, () => {

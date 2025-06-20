@@ -54,34 +54,90 @@ export default function VerWhatsApp() {
   const lastButton = buttons[buttons.length - 1];
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+    <div style={{ 
+      minHeight: '100vh',
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
+      padding: '20px'
+    }}>
       
+      {/* Botón volver - diseño bonito */}
+      <button
+        onClick={() => navigate('/confgWhatsapp')}
+        style={{
+          position: 'fixed',
+          top: '30px',
+          left: '30px',
+          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '16px',
+          padding: '12px 20px',
+          fontSize: '16px',
+          fontWeight: '600',
+          cursor: 'pointer',
+          zIndex: 1002,
+          boxShadow: '0 8px 25px rgba(99, 102, 241, 0.4)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          transition: 'all 0.3s ease',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}
+        onMouseOver={(e) => {
+          e.target.style.transform = 'translateY(-2px)';
+          e.target.style.boxShadow = '0 12px 35px rgba(99, 102, 241, 0.5)';
+        }}
+        onMouseOut={(e) => {
+          e.target.style.transform = 'translateY(0)';
+          e.target.style.boxShadow = '0 8px 25px rgba(99, 102, 241, 0.4)';
+        }}
+      >
+        ⬅️ Volver a Configurar
+      </button>
+
       {/* Solo mostrar el último botón CON NUEVOS CAMPOS */}
       {lastButton && (
         <>
-          <button 
+          <button
             style={getPositionStyles(lastButton.position, lastButton.color)}
             onClick={() => openWhatsApp(lastButton.phoneWithCode, lastButton.startMessage)}
           >
             {lastButton.icon} WhatsApp
           </button>
           
-          {/* Botón eliminar en esquina opuesta */}
-          <button 
+          {/* Botón eliminar mejorado */}
+          <button
             style={{
               position: 'fixed',
-              top: '20px',
-              left: '20px',
-              backgroundColor: '#d72c0d',
+              top: '30px',
+              right: '30px',
+              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
               color: 'white',
-              padding: '8px 12px',
               border: 'none',
-              borderRadius: '4px',
-              fontSize: '12px',
+              borderRadius: '16px',
+              padding: '12px 20px',
+              fontSize: '16px',
+              fontWeight: '600',
               cursor: 'pointer',
-              zIndex: 1001
+              zIndex: 1001,
+              boxShadow: '0 8px 25px rgba(239, 68, 68, 0.4)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}
             onClick={() => deleteButton(lastButton.id)}
+            onMouseOver={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 12px 35px rgba(239, 68, 68, 0.5)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 8px 25px rgba(239, 68, 68, 0.4)';
+            }}
           >
             🗑️ Eliminar
           </button>

@@ -22,7 +22,8 @@ export default function App() {
         <Link to="/app" rel="home">
           Home
         </Link>
-        <Link to="/app/additional">Confg Whatsapp</Link>
+        <Link to="/confgWhatsapp">WhatsApp</Link>
+        <Link to="/verWhatsapp">Ver Botton</Link>
       </NavMenu>
       <Outlet />
     </AppProvider>

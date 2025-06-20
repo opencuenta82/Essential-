@@ -1,78 +1,83 @@
-// Archivo: app/routes/app.whatsapp.jsx (archivo plano, NO carpeta)
-
-import { Page, Card, Text, TextField, Button, BlockStack, Select, InlineStack } from "@shopify/polaris";
-import { TitleBar } from "@shopify/app-bridge-react";
 import { useState } from "react";
+import { useNavigate } from "@remix-run/react";
 
-export default function WhatsAppConfig() {
-  const [phone, setPhone] = useState("");
-  const [message, setMessage] = useState("¡Hola! ¿En qué puedo ayudarte?");
+export default function ConfigWhatsApp() {
+  const navigate = useNavigate();
+  
+  // Estado para los campos del formulario
+  const [phone, setPhone] = useState("51999999999");
+  const [message, setMessage] = useState("¡Hola! Me interesa tu producto");
   const [position, setPosition] = useState("bottom-right");
-  const [color, setColor] = useState("green");
 
-  const positionOptions = [
-    { label: "Abajo Derecha", value: "bottom-right" },
-    { label: "Abajo Izquierda", value: "bottom-left" },
-    { label: "Centro Derecha", value: "center-right" },
-  ];
+  const createButton = () => {
+    // Crear el botón y guardarlo en localStorage
+    const newButton = {
+      id: Date.now(),
+      phone: phone,
+      message: message,
+      position: position,
+      time: new Date().toLocaleTimeString(),
+      date: new Date().toLocaleDateString()
+    };
 
-  const colorOptions = [
-    { label: "Verde", value: "green" },
-    { label: "Azul", value: "blue" },
-    { label: "Rojo", value: "red" },
-  ];
-
-  const generateButton = () => {
-    console.log("Generar botón:", { phone, message, position, color });
-    alert("Botón generado! Revisa la consola");
+    // Obtener botones existentes
+    const existingButtons = JSON.parse(localStorage.getItem('whatsappButtons') || '[]');
+    
+    // Agregar el nuevo botón
+    const updatedButtons = [...existingButtons, newButton];
+    
+    // Guardar en localStorage
+    localStorage.setItem('whatsappButtons', JSON.stringify(updatedButtons));
+    
+    // Redirigir a la página de ver botones
+    navigate('/verWhatsapp');
   };
 
   return (
-    <Page>
-      <TitleBar title="WhatsApp Config" />
-      <Card>
-        <BlockStack gap="400">
-          <Text as="h2" variant="headingMd">
-            Configuración WhatsApp
-          </Text>
-          
-          <TextField
-            label="Número de WhatsApp"
-            value={phone}
-            onChange={setPhone}
-            placeholder="+51987654321"
-          />
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h1>🚀 Generador de Botones WhatsApp</h1>
+      
+      <p style={{ color: '#616161', marginBottom: '20px' }}>
+        Configura tu botón de WhatsApp y créalo para verlo en la siguiente página.
+      </p>
 
-          <TextField
-            label="Mensaje de introducción"
-            value={message}
-            onChange={setMessage}
-            multiline
-          />
+      <div style={{ marginBottom: '12px' }}>
+        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+          Ubicacion:
+        </label>
+        <select
+          value={position}
+          onChange={(e) => setPosition(e.target.value)}
+          style={{
+            width: '200px',
+            padding: '6px',
+            border: '1px solid #ccc',
+            borderRadius: '4px'
+          }}
+        >
+          <option value="top-left">Arriba</option>
+          <option value="bottom-left">Abajo</option>
+          <option value="bottom-right">Derecha</option>
+          <option value="top-right">Izquierda</option>
+        </select>
+      </div>
 
-          <InlineStack gap="300">
-            <Select
-              label="Ubicación del botón"
-              options={positionOptions}
-              value={position}
-              onChange={setPosition}
-            />
+      <button 
+        onClick={createButton}
+        style={{
+          backgroundColor: '#007c89',
+          color: 'white',
+          padding: '12px 24px',
+          border: 'none',
+          borderRadius: '6px',
+          fontSize: '16px',
+          cursor: 'pointer',
+          marginBottom: '20px'
+        }}
+      >
+        ✨ Crear Botón WhatsApp
+      </button>
 
-            <Select
-              label="Color del botón"
-              options={colorOptions}
-              value={color}
-              onChange={setColor}
-            />
-          </InlineStack>
-
-          <InlineStack align="end">
-            <Button variant="primary" onClick={generateButton}>
-              Generar Botón
-            </Button>
-          </InlineStack>
-        </BlockStack>
-      </Card>
-    </Page>
+    </div>
   );
 }

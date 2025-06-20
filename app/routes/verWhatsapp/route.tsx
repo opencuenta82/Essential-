@@ -21,11 +21,11 @@ export default function VerWhatsApp() {
     localStorage.setItem('whatsappButtons', JSON.stringify(updatedButtons));
   };
 
-  // Función para obtener estilos de posición
-  const getPositionStyles = (position) => {
+  // Función para obtener estilos de posición CON COLOR
+  const getPositionStyles = (position, color) => {
     const baseStyles = {
       position: 'fixed',
-      backgroundColor: '#25D366',
+      backgroundColor: color || '#25D366',
       color: 'white',
       padding: '12px 16px',
       border: 'none',
@@ -56,14 +56,14 @@ export default function VerWhatsApp() {
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       
-      {/* Solo mostrar el último botón */}
+      {/* Solo mostrar el último botón CON NUEVOS CAMPOS */}
       {lastButton && (
         <>
           <button 
-            style={getPositionStyles(lastButton.position)}
-            onClick={() => openWhatsApp(lastButton.phone, lastButton.message)}
+            style={getPositionStyles(lastButton.position, lastButton.color)}
+            onClick={() => openWhatsApp(lastButton.phoneWithCode, lastButton.startMessage)}
           >
-            💬 WhatsApp
+            {lastButton.icon} WhatsApp
           </button>
           
           {/* Botón eliminar en esquina opuesta */}

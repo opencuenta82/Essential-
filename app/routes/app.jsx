@@ -18,12 +18,16 @@ export default function App() {
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
-      <NavMenu>
+      <NavMenu open={true}>
         <Link to="/app" rel="home">
-          Home
+          🏠 Inicio
         </Link>
-        <Link to="/confgWhatsapp">WhatsApp</Link>
-        <Link to="/verWhatsapp">Ver Botton</Link>
+        <Link to="/confgWhatsapp">
+          ⚙️ Configurar WhatsApp
+        </Link>
+        <Link to="/verWhatsapp">
+          👁️ Ver Botón WhatsApp
+        </Link>
       </NavMenu>
       <Outlet />
     </AppProvider>

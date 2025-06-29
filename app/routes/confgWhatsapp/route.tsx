@@ -31,7 +31,7 @@ export default function ConfigWhatsApp() {
     const existingButtons = JSON.parse(localStorage.getItem('whatsappButtons') || '[]');
     const updatedButtons = [...existingButtons, newButton];
     localStorage.setItem('whatsappButtons', JSON.stringify(updatedButtons));
-    navigate('/verWhatsapp');
+  
   };
 
   return (

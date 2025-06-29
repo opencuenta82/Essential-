@@ -1,0 +1,6 @@
+# shopify.extension.toml - Configuración CORRECTA para App Embed
+name = "whatsapp-button"
+type = "theme"
+
+[[app_embeds]]
+root = "./blocks/whatsapp_widget.liquid"

@@ -1,0 +1,66 @@
+{% schema %}
+{
+  "name": "WhatsApp Chat Widget",
+  "target": "body",
+  "settings": [
+    {
+      "type": "text",
+      "id": "phone_number",
+      "label": "Número de WhatsApp",
+      "default": "51999999999",
+      "info": "Número con código de país, sin signos + ni espacios"
+    },
+    {
+      "type": "textarea",
+      "id": "message",
+      "label": "Mensaje inicial",
+      "default": "¡Hola! Me interesa tu producto",
+      "info": "Mensaje que aparecerá pre-escrito en WhatsApp"
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Color del botón",
+      "default": "#25D366",
+      "info": "Color de fondo del botón (por defecto verde WhatsApp)"
+    },
+    {
+      "type": "select",
+      "id": "position",
+      "label": "Posición del widget",
+      "default": "bottom-right",
+      "options": [
+        {
+          "value": "bottom-right",
+          "label": "Abajo derecha"
+        },
+        {
+          "value": "bottom-left",
+          "label": "Abajo izquierda"
+        },
+        {
+          "value": "top-right",
+          "label": "Arriba derecha"
+        },
+        {
+          "value": "top-left",
+          "label": "Arriba izquierda"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "tooltip_text",
+      "label": "Texto del tooltip",
+      "default": "¡Chatea con nosotros!",
+      "info": "Texto que aparece al pasar el mouse sobre el botón"
+    },
+    {
+      "type": "checkbox",
+      "id": "enabled",
+      "label": "Habilitar widget",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

@@ -25,9 +25,6 @@ export default function App() {
         <Link to="/confgWhatsapp">
           ⚙️ Configurar WhatsApp
         </Link>
-        <Link to="/verWhatsapp">
-          👁️ Ver Botón WhatsApp
-        </Link>
       </NavMenu>
       <Outlet />
     </AppProvider>

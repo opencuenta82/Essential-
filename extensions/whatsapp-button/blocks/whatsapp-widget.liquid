@@ -1,222 +1,306 @@
-{% comment %}
-  WhatsApp Widget - App Embed Block
-  Configuración completa con settings
-{% endcomment %}
+{% comment %} Leer configuración SOLO desde metafields (sin valores por defecto) {% endcomment %}
+{% assign phone_number = shop.metafields.whatsapp_widget.phone_number %}
+{% assign message = shop.metafields.whatsapp_widget.message %}
+{% assign button_color = shop.metafields.whatsapp_widget.button_color %}
+{% assign position = shop.metafields.whatsapp_widget.position %}
+{% assign icon = shop.metafields.whatsapp_widget.icon %}
 
-{% if block.settings.enabled %}
+{% comment %} Los datos vienen ÚNICAMENTE del formulario de la app {% endcomment %}
 
-{% assign whatsapp_config = block.settings %}
-{% assign phone_number = whatsapp_config.phone_number | default: "51999999999" %}
-{% assign message = whatsapp_config.message | default: "¡Hola! Me interesa tu producto" %}
-{% assign button_color = whatsapp_config.button_color | default: "#25D366" %}
-{% assign position = whatsapp_config.position | default: "bottom-right" %}
-{% assign tooltip_text = whatsapp_config.tooltip_text | default: "¡Chatea con nosotros!" %}
+{% comment %} Solo mostrar si está habilitado Y si hay datos del formulario {% endcomment %}
+{% if block.settings.enable_widget and phone_number != blank and message != blank %}
 
-<!-- WhatsApp Widget Styles -->
-<style>
-  .whatsapp-widget {
-    position: fixed;
-    z-index: 9999;
-    transition: all 0.3s ease;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  }
+{% comment %} Debug: Verificar datos del formulario {% endcomment %}
+<script>
+  console.log('=== WHATSAPP WIDGET DEBUG ===');
+  console.log('Metafields disponibles:', {{ shop.metafields.whatsapp_widget | json }});
+  console.log('Configuración desde formulario:', {
+    phone: '{{ phone_number }}',
+    message: '{{ message }}',
+    color: '{{ button_color }}',
+    position: '{{ position }}',
+    icon: '{{ icon }}',
+    source: 'formulario únicamente',
+    timestamp: '{{ "now" | date: "%Y-%m-%d %H:%M:%S" }}'
+  });
   
-  /* Posiciones */
-  .whatsapp-widget.bottom-right {
-    bottom: 20px;
-    right: 20px;
-  }
+  // Verificar si los metafields están configurados
+  {% if shop.metafields.whatsapp_widget.phone_number %}
+    console.log('✅ Formulario configurado - phone_number:', '{{ shop.metafields.whatsapp_widget.phone_number }}');
+  {% else %}
+    console.log('❌ Formulario NO configurado - phone_number faltante');
+  {% endif %}
   
-  .whatsapp-widget.bottom-left {
-    bottom: 20px;
-    left: 20px;
-  }
+  {% if shop.metafields.whatsapp_widget.message %}
+    console.log('✅ Formulario configurado - message:', '{{ shop.metafields.whatsapp_widget.message }}');
+  {% else %}
+    console.log('❌ Formulario NO configurado - message faltante');
+  {% endif %}
   
-  .whatsapp-widget.top-right {
-    top: 20px;
-    right: 20px;
-  }
+  {% if shop.metafields.whatsapp_widget.button_color %}
+    console.log('✅ Formulario configurado - button_color:', '{{ shop.metafields.whatsapp_widget.button_color }}');
+  {% else %}
+    console.log('❌ Formulario NO configurado - button_color faltante');
+  {% endif %}
   
-  .whatsapp-widget.top-left {
-    top: 20px;
-    left: 20px;
-  }
+  {% if shop.metafields.whatsapp_widget.position %}
+    console.log('✅ Formulario configurado - position:', '{{ shop.metafields.whatsapp_widget.position }}');
+  {% else %}
+    console.log('❌ Formulario NO configurado - position faltante');
+  {% endif %}
   
-  .whatsapp-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 60px;
-    height: 60px;
-    background-color: {{ button_color }};
-    border-radius: 50%;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
-    border: none;
-  }
-  
-  .whatsapp-button:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-  }
-  
-  .whatsapp-icon {
-    width: 35px;
-    height: 35px;
-    fill: white;
-  }
-  
-  /* Tooltip */
-  .whatsapp-tooltip {
-    position: absolute;
-    background: #333;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 14px;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-    pointer-events: none;
-  }
-  
-  .whatsapp-widget.bottom-right .whatsapp-tooltip,
-  .whatsapp-widget.bottom-left .whatsapp-tooltip {
-    bottom: 70px;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-  
-  .whatsapp-widget.top-right .whatsapp-tooltip,
-  .whatsapp-widget.top-left .whatsapp-tooltip {
-    top: 70px;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-  
-  .whatsapp-widget:hover .whatsapp-tooltip {
-    opacity: 1;
-    visibility: visible;
-  }
-  
-  /* Mobile responsiveness */
-  @media (max-width: 768px) {
-    .whatsapp-widget {
-      bottom: 15px !important;
-      right: 15px !important;
-    }
-    
-    .whatsapp-button {
-      width: 55px;
-      height: 55px;
-    }
-    
-    .whatsapp-icon {
-      width: 30px;
-      height: 30px;
-    }
-  }
-</style>
+  {% if shop.metafields.whatsapp_widget.icon %}
+    console.log('✅ Formulario configurado - icon:', '{{ shop.metafields.whatsapp_widget.icon }}');
+  {% else %}
+    console.log('❌ Formulario NO configurado - icon faltante');
+  {% endif %}
+</script>
 
-<!-- WhatsApp Widget HTML -->
-<div class="whatsapp-widget {{ position }}" id="whatsapp-widget-{{ block.id }}">
-  <a href="https://wa.me/{{ phone_number }}?text={{ message | url_encode }}" 
-     class="whatsapp-button" 
-     target="_blank"
-     rel="noopener"
-     data-phone="{{ phone_number }}"
-     data-message="{{ message }}"
-     onclick="trackWhatsAppClick(this)">
-    
-    <!-- WhatsApp SVG Icon -->
-    <svg class="whatsapp-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.893 3.386"/>
-    </svg>
-    
-    <!-- Tooltip -->
-    <div class="whatsapp-tooltip">
-      💬 {{ tooltip_text }}
-    </div>
-  </a>
+{% comment %} Widget de WhatsApp usando SOLO la configuración del formulario {% endcomment %}
+<div id="whatsapp-widget-{{ block.id }}" style="
+  position: fixed;
+  {% case position %}
+    {% when 'top-left' %}
+      top: 20px;
+      left: 20px;
+    {% when 'top-right' %}
+      top: 20px;
+      right: 20px;
+    {% when 'bottom-left' %}
+      bottom: 20px;
+      left: 20px;
+    {% when 'bottom-right' %}
+      bottom: 20px;
+      right: 20px;
+    {% else %}
+      bottom: 20px;
+      right: 20px;
+  {% endcase %}
+  z-index: 9999;
+  background-color: {{ button_color }};
+  border-radius: {{ block.settings.border_radius | default: 50 }}px;
+  padding: 15px 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  font-size: {{ block.settings.font_size | default: 14 }}px;
+  color: white;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: {{ block.settings.opacity | default: 100 | divided_by: 100.0 }};
+" onclick="openWhatsApp{{ block.id }}()">
+  <span style="font-size: {{ block.settings.font_size | default: 14 | plus: 10 }}px;">{{ icon }}</span>
+  {% if block.settings.show_text %}
+    <span style="font-weight: bold;">{{ block.settings.button_text | default: 'WhatsApp' }}</span>
+  {% endif %}
 </div>
 
-<!-- JavaScript para tracking -->
 <script>
-  function trackWhatsAppClick(element) {
-    console.log('WhatsApp widget clicked:', {
-      phone: element.dataset.phone,
-      message: element.dataset.message
-    });
-  }
+function openWhatsApp{{ block.id }}() {
+  const phone = '{{ phone_number }}';
+  const message = encodeURIComponent('{{ message | escape }}');
+  const url = `https://wa.me/${phone}?text=${message}`;
+  
+  console.log('Abriendo WhatsApp con datos del formulario:', {
+    phone: phone,
+    message: '{{ message | escape }}',
+    url: url
+  });
+  
+  {% if block.settings.open_in_new_tab %}
+    window.open(url, '_blank');
+  {% else %}
+    window.location.href = url;
+  {% endif %}
+}
+
+// Hover effect
+document.getElementById('whatsapp-widget-{{ block.id }}').addEventListener('mouseenter', function() {
+  this.style.transform = 'scale({{ block.settings.hover_scale | default: 110 | divided_by: 100.0 }})';
+});
+
+document.getElementById('whatsapp-widget-{{ block.id }}').addEventListener('mouseleave', function() {
+  this.style.transform = 'scale(1)';
+});
+
+// Animación de entrada si está habilitada
+{% if block.settings.entrance_animation %}
+document.addEventListener('DOMContentLoaded', function() {
+  const widget = document.getElementById('whatsapp-widget-{{ block.id }}');
+  widget.style.opacity = '0';
+  widget.style.transform = 'scale(0.5)';
+  
+  setTimeout(() => {
+    widget.style.transition = 'all 0.5s ease';
+    widget.style.opacity = '{{ block.settings.opacity | default: 100 | divided_by: 100.0 }}';
+    widget.style.transform = 'scale(1)';
+  }, {{ block.settings.entrance_delay | default: 1000 }});
+});
+{% endif %}
 </script>
+
+{% else %}
+
+{% comment %} Mensaje de configuración requerida {% endcomment %}
+{% unless block.settings.enable_widget %}
+  <script>
+    console.log('❌ WhatsApp Widget deshabilitado en la configuración del tema');
+  </script>
+{% else %}
+  <script>
+    console.log('❌ WhatsApp Widget requiere configuración del formulario');
+    console.log('Faltan datos:', {
+      phone_number: {{ phone_number | json }},
+      message: {{ message | json }},
+      button_color: {{ button_color | json }},
+      position: {{ position | json }},
+      icon: {{ icon | json }}
+    });
+  </script>
+  
+  {% comment %} Mostrar mensaje de ayuda solo en modo preview {% endcomment %}
+  {% if request.design_mode %}
+    <div style="
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #fee2e2;
+      border: 2px solid #fca5a5;
+      border-radius: 12px;
+      padding: 16px;
+      max-width: 300px;
+      font-family: system-ui, sans-serif;
+      font-size: 14px;
+      color: #991b1b;
+      z-index: 9999;
+    ">
+      <strong>⚠️ WhatsApp Widget</strong><br>
+      <span style="font-size: 12px;">
+        Configura el widget desde la app antes de usarlo.
+        {% unless phone_number %}❌ Teléfono{% endunless %}
+        {% unless message %}❌ Mensaje{% endunless %}
+        {% unless button_color %}❌ Color{% endunless %}
+        {% unless position %}❌ Posición{% endunless %}
+        {% unless icon %}❌ Icono{% endunless %}
+      </span>
+    </div>
+  {% endif %}
+{% endunless %}
 
 {% endif %}
 
 {% schema %}
 {
-  "name": "WhatsApp Chat Widget",
+  "name": "WhatsApp Widget",
   "target": "body",
   "settings": [
     {
-      "type": "text",
-      "id": "phone_number",
-      "label": "Número de WhatsApp",
-      "default": "51999999999",
-      "info": "Número con código de país, sin signos + ni espacios"
-    },
-    {
-      "type": "textarea",
-      "id": "message",
-      "label": "Mensaje inicial",
-      "default": "¡Hola! Me interesa tu producto",
-      "info": "Mensaje que aparecerá pre-escrito en WhatsApp"
-    },
-    {
-      "type": "color",
-      "id": "button_color",
-      "label": "Color del botón",
-      "default": "#25D366",
-      "info": "Color de fondo del botón (por defecto verde WhatsApp)"
-    },
-    {
-      "type": "select",
-      "id": "position",
-      "label": "Posición del widget",
-      "default": "bottom-right",
-      "options": [
-        {
-          "value": "bottom-right",
-          "label": "Abajo derecha"
-        },
-        {
-          "value": "bottom-left",
-          "label": "Abajo izquierda"
-        },
-        {
-          "value": "top-right",
-          "label": "Arriba derecha"
-        },
-        {
-          "value": "top-left",
-          "label": "Arriba izquierda"
-        }
-      ]
-    },
-    {
-      "type": "text",
-      "id": "tooltip_text",
-      "label": "Texto del tooltip",
-      "default": "¡Chatea con nosotros!",
-      "info": "Texto que aparece al pasar el mouse sobre el botón"
+      "type": "header",
+      "content": "📱 Configuración Principal"
     },
     {
       "type": "checkbox",
-      "id": "enabled",
-      "label": "Habilitar widget",
+      "id": "enable_widget",
+      "label": "Activar Widget de WhatsApp",
+      "default": true,
+      "info": "Habilita o deshabilita el widget en toda la tienda"
+    },
+    {
+      "type": "paragraph",
+      "content": "⚠️ IMPORTANTE: Debes configurar el widget desde la app primero. Todos los datos (teléfono, mensaje, color, posición, icono) vienen únicamente del formulario de configuración de la app."
+    },
+    {
+      "type": "header",
+      "content": "🎨 Personalización Visual"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_text",
+      "label": "Mostrar texto 'WhatsApp'",
       "default": true
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Texto del botón",
+      "default": "WhatsApp",
+      "info": "Solo se muestra si 'Mostrar texto' está activado"
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "min": 10,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "label": "Tamaño de fuente",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "px",
+      "label": "Radio de borde",
+      "default": 50,
+      "info": "0 = cuadrado, 50 = redondeado"
+    },
+    {
+      "type": "range",
+      "id": "opacity",
+      "min": 50,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "label": "Opacidad",
+      "default": 100
+    },
+    {
+      "type": "header",
+      "content": "✨ Efectos y Animaciones"
+    },
+    {
+      "type": "range",
+      "id": "hover_scale",
+      "min": 100,
+      "max": 150,
+      "step": 5,
+      "unit": "%",
+      "label": "Escala al hacer hover",
+      "default": 110,
+      "info": "100% = sin efecto, 150% = máximo zoom"
+    },
+    {
+      "type": "checkbox",
+      "id": "entrance_animation",
+      "label": "Activar animación de entrada",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "entrance_delay",
+      "min": 0,
+      "max": 5000,
+      "step": 500,
+      "unit": "ms",
+      "label": "Retraso de animación",
+      "default": 1000,
+      "info": "Solo aplica si la animación está activada"
+    },
+    {
+      "type": "header",
+      "content": "🔗 Comportamiento"
+    },
+    {
+      "type": "checkbox",
+      "id": "open_in_new_tab",
+      "label": "Abrir WhatsApp en nueva pestaña",
+      "default": true,
+      "info": "Si está desactivado, redirige en la misma pestaña"
     }
   ]
 }

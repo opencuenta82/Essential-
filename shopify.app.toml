@@ -3,7 +3,7 @@
 client_id = "b79e2fb8bcb7a5671f55e60712f610c2"
 name = "Essential_v1"
 handle = "essential-v1"
-application_url = "https://bases-logical-webpage-bingo.trycloudflare.com"
+application_url = "https://till-fine-geology-remaining.trycloudflare.com"
 embedded = true
 
 [build]
@@ -26,7 +26,7 @@ api_version = "2025-04"
 scopes = "read_orders,read_products,write_orders,write_products"
 
 [auth]
-redirect_urls = ["https://bases-logical-webpage-bingo.trycloudflare.com/auth/callback", "https://bases-logical-webpage-bingo.trycloudflare.com/auth/shopify/callback", "https://bases-logical-webpage-bingo.trycloudflare.com/api/auth/callback"]
+redirect_urls = ["https://till-fine-geology-remaining.trycloudflare.com/auth/callback", "https://till-fine-geology-remaining.trycloudflare.com/auth/shopify/callback", "https://till-fine-geology-remaining.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false

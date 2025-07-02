@@ -685,7 +685,7 @@ export default function ConfigWhatsApp() {
           </div>
         </div>
 
-        {/* Debug información (solo en desarrollo) */}
+        {/* Debug información (solo en HOLA desarrollo) */}
         {fetcher.data && (
           <details style={{ marginTop: '20px' }}>
             <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>

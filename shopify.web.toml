@@ -5,3 +5,15 @@ webhooks_path = "/webhooks/app/uninstalled"
 [commands]
 predev = "npx prisma generate"
 dev = "npx prisma migrate deploy && npm exec remix vite:dev"
+
+[env]
+# Variables de entorno específicas para desarrollo
+SHOPIFY_API_KEY = "b79e2fb8bcb7a5671f55e60712f610c2"
+
+[build]
+# Comandos para construcción en producción
+command = "npm run build"
+
+[start]
+# Comando para iniciar en producción
+command = "npm start"

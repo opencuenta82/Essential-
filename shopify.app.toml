@@ -3,7 +3,7 @@
 client_id = "b79e2fb8bcb7a5671f55e60712f610c2"
 name = "Essential_v1"
 handle = "essential-v1"
-application_url = "https://till-fine-geology-remaining.trycloudflare.com"
+application_url = "https://essential-production.up.railway.app"
 embedded = true
 
 [build]
@@ -15,18 +15,22 @@ api_version = "2025-04"
 
   [[webhooks.subscriptions]]
   topics = [ "app/scopes_update" ]
-  uri = "https://landscapes-strengths-spin-outcome.trycloudflare.com/webhooks/app/scopes_update"
+  uri = "https://essential-production.up.railway.app/webhooks/app/scopes_update"
 
   [[webhooks.subscriptions]]
   topics = [ "app/uninstalled" ]
-  uri = "https://landscapes-strengths-spin-outcome.trycloudflare.com/webhooks/app/uninstalled"
+  uri = "https://essential-production.up.railway.app/webhooks/app/uninstalled"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_orders,read_products,write_orders,write_products"
+scopes = "read_orders,read_products,write_orders,write_products,read_metafields,write_metafields"
 
 [auth]
-redirect_urls = ["https://till-fine-geology-remaining.trycloudflare.com/auth/callback", "https://till-fine-geology-remaining.trycloudflare.com/auth/shopify/callback", "https://till-fine-geology-remaining.trycloudflare.com/api/auth/callback"]
+redirect_urls = [
+  "https://essential-production.up.railway.app/auth/callback", 
+  "https://essential-production.up.railway.app/auth/shopify/callback", 
+  "https://essential-production.up.railway.app/api/auth/callback"
+]
 
 [pos]
 embedded = false

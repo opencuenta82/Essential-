@@ -3,7 +3,7 @@
 client_id = "b79e2fb8bcb7a5671f55e60712f610c2"
 name = "Essential_v1"
 handle = "essential-v1"
-application_url = "https://essential-production.up.railway.app"
+application_url = "https://married-ham-coaching-philosophy.trycloudflare.com"
 embedded = true
 
 [build]
@@ -26,11 +26,7 @@ api_version = "2025-04"
 scopes = "read_orders,read_products,write_orders,write_products"
 
 [auth]
-redirect_urls = [
-  "https://essential-production.up.railway.app/auth/callback", 
-  "https://essential-production.up.railway.app/auth/shopify/callback", 
-  "https://essential-production.up.railway.app/api/auth/callback"
-]
+redirect_urls = ["https://married-ham-coaching-philosophy.trycloudflare.com/auth/callback", "https://married-ham-coaching-philosophy.trycloudflare.com/auth/shopify/callback", "https://married-ham-coaching-philosophy.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false

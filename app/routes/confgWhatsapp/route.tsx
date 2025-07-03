@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { useNavigate } from "@remix-run/react";
 import { useFetcher } from "@remix-run/react";
 import { ActionFunctionArgs, json } from "@remix-run/node";
@@ -156,55 +157,16 @@ export async function action({ request }: ActionFunctionArgs) {
     const savedMetafields = result.data?.metafieldsSet?.metafields || [];
     console.log("✅ Metafields guardados exitosamente:", savedMetafields);
 
-    // Verificación adicional: Leer los metafields guardados
-    try {
-      const verificationQuery = await admin.graphql(`
-        query {
-          shop {
-            metafields(namespace: "whatsapp_widget", first: 10) {
-              edges {
-                node {
-                  id
-                  namespace
-                  key
-                  value
-                  type
-                }
-              }
-            }
-          }
-        }
-      `);
-
-      const verificationResult = await verificationQuery.json();
-      console.log("🔍 Verificación - Metafields en la tienda:", verificationResult.data?.shop?.metafields?.edges);
-
-      return json({ 
-        success: true, 
-        message: "Configuración guardada exitosamente",
-        config,
-        savedMetafields,
-        verification: verificationResult.data?.shop?.metafields?.edges,
-        shopInfo: {
-          domain: session.shop,
-          shopId: shopId
-        }
-      });
-    } catch (verificationError) {
-      console.log("⚠️ Error en verificación, pero metafields guardados:", verificationError.message);
-      
-      return json({ 
-        success: true, 
-        message: "Configuración guardada exitosamente",
-        config,
-        savedMetafields,
-        shopInfo: {
-          domain: session.shop,
-          shopId: shopId
-        },
-        warning: "No se pudo verificar la guardada, pero los metafields se crearon"
-      });
-    }
+    return json({ 
+      success: true, 
+      message: "Configuración guardada exitosamente",
+      config,
+      savedMetafields,
+      shopInfo: {
+        domain: session.shop,
+        shopId: shopId
+      }
+    });
     
   } catch (error) {
     console.error("💥 Error guardando configuración:", error);
@@ -264,6 +226,48 @@ export default function ConfigWhatsApp() {
       method: "POST"
     });
   };
+
+  // Efecto para redirigir cuando llega la respuesta exitosa
+  React.useEffect(() => {
+    if (fetcher.data?.success && fetcher.data?.shopInfo?.domain) {
+      console.log("✅ Datos recibidos, iniciando redirección...");
+      
+      // Extraer el nombre de la tienda del dominio
+      const shopDomain = fetcher.data.shopInfo.domain;
+      const shopName = shopDomain.replace('.myshopify.com', '');
+      
+      // Construir la URL de integraciones de aplicaciones
+      const themeEditorUrl = `https://admin.shopify.com/store/${shopName}/themes/current/editor?context=apps`;
+      
+      console.log("🔗 URL construida:", themeEditorUrl);
+      console.log("🔗 Shop name:", shopName);
+      
+      // Redirigir después de 2 segundos
+      const redirectTimeout = setTimeout(() => {
+        console.log("🚀 Ejecutando redirección...");
+        window.open(themeEditorUrl, '_blank');
+        
+        // RESETEAR el formulario después de la redirección
+        setTimeout(() => {
+          console.log("🔄 Reseteando formulario...");
+          // Limpiar el estado del fetcher
+          window.location.reload(); // Opción 1: Recargar página
+          
+          // Opción 2: Resetear manualmente (comentada)
+          // setPosition("bottom-right");
+          // setColor("#25D366");
+          // setIcon("💬");
+          // setCountryCode("51");
+          // setPhoneNumber("999999999");
+          // setStartMessage("¡Hola! Me interesa tu producto");
+        }, 1000);
+        
+      }, 2000);
+
+      // Limpiar timeout si el componente se desmonta
+      return () => clearTimeout(redirectTimeout);
+    }
+  }, [fetcher.data]);
 
   // Mostrar estado de envío
   const isSubmitting = fetcher.state === "submitting";
@@ -577,10 +581,10 @@ export default function ConfigWhatsApp() {
           />
         </div>
 
-        {/* Botón actualizado */}
+        {/* Botón actualizado con animaciones */}
         <button 
           onClick={createButton}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isSuccess}
           style={{
             width: '100%',
             padding: '20px 32px',
@@ -596,46 +600,183 @@ export default function ConfigWhatsApp() {
             borderRadius: '20px',
             fontSize: '18px',
             fontWeight: '700',
-            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            cursor: (isSubmitting || isSuccess) ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s ease',
-            boxShadow: '0 10px 30px rgba(99, 102, 241, 0.4)',
+            boxShadow: isSuccess 
+              ? '0 10px 30px rgba(16, 185, 129, 0.4)' 
+              : hasError 
+                ? '0 10px 30px rgba(239, 68, 68, 0.4)'
+                : '0 10px 30px rgba(99, 102, 241, 0.4)',
             letterSpacing: '0.5px',
-            textTransform: 'uppercase'
+            textTransform: 'uppercase',
+            position: 'relative',
+            overflow: 'hidden'
           }}
         >
-          {isSubmitting 
-            ? '⏳ Guardando...' 
-            : hasError
-              ? '❌ Error - Intentar de nuevo'
-              : isSuccess 
-                ? '✅ ¡Configuración guardada!'
-                : '✨ Crear Botón WhatsApp ✨'
-          }
+          {/* Contenido del botón */}
+          <span style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            position: 'relative',
+            zIndex: 2
+          }}>
+            {isSubmitting && (
+              <div style={{
+                width: '20px',
+                height: '20px',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                borderTop: '2px solid white',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }}></div>
+            )}
+            
+            {isSuccess && (
+              <div style={{
+                width: '20px',
+                height: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <div style={{
+                  width: '12px',
+                  height: '6px',
+                  borderLeft: '2px solid white',
+                  borderBottom: '2px solid white',
+                  transform: 'rotate(-45deg)',
+                  animation: 'checkmark 0.5s ease-in-out'
+                }}></div>
+              </div>
+            )}
+            
+            {!isSubmitting && !isSuccess && !hasError && '✨'}
+            {hasError && '❌'}
+            
+            <span>
+              {isSubmitting 
+                ? 'Guardando configuración...' 
+                : hasError
+                  ? 'Error - Intentar de nuevo'
+                  : isSuccess 
+                    ? '¡Guardado! Redirigiendo...'
+                    : 'Crear Botón WhatsApp'
+              }
+            </span>
+          </span>
+          
+          {/* Animación de progreso para estado de éxito */}
+          {isSuccess && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              height: '100%',
+              background: 'rgba(255, 255, 255, 0.2)',
+              animation: 'progress 2s linear forwards',
+              borderRadius: '20px'
+            }}></div>
+          )}
         </button>
+        
+        {/* CSS Animations */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            
+            @keyframes checkmark {
+              0% { width: 0; height: 0; }
+              50% { width: 0; height: 6px; }
+              100% { width: 12px; height: 6px; }
+            }
+            
+            @keyframes progress {
+              0% { width: 0%; }
+              100% { width: 100%; }
+            }
+            
+            @keyframes pulse {
+              0%, 100% { transform: scale(1); }
+              50% { transform: scale(1.02); }
+            }
+          `
+        }} />
 
-        {/* Mensaje de éxito */}
+        {/* Mensaje de éxito con contador */}
         {isSuccess && (
           <div style={{
             marginTop: '20px',
-            padding: '16px',
+            padding: '20px',
             background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             color: 'white',
-            borderRadius: '12px',
+            borderRadius: '16px',
             textAlign: 'center',
-            fontWeight: '600'
+            fontWeight: '600',
+            boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)',
+            animation: 'pulse 2s ease-in-out infinite'
           }}>
-            🎉 ¡Configuración guardada exitosamente! Los datos ya están disponibles en tu tema.
-            <br />
-            <small style={{ opacity: 0.9 }}>
-              Ve al editor de temas y agrega el "WhatsApp Widget" como App Block
-            </small>
+            <div style={{ 
+              fontSize: '24px', 
+              marginBottom: '8px',
+              animation: 'bounce 1s ease-in-out infinite'
+            }}>
+              🎉
+            </div>
+            
+            <div style={{ fontSize: '18px', marginBottom: '8px' }}>
+              ¡Configuración guardada exitosamente!
+            </div>
+            
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              marginBottom: '12px'
+            }}>
+              <div style={{
+                width: '16px',
+                height: '16px',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                borderTop: '2px solid white',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }}></div>
+              <span style={{ fontSize: '14px', opacity: 0.9 }}>
+                Redirigiendo a Integraciones de Aplicaciones...
+              </span>
+            </div>
+            
             {fetcher.data?.shopInfo && (
-              <div style={{ marginTop: '8px', fontSize: '12px', opacity: 0.8 }}>
-                Tienda: {fetcher.data.shopInfo.domain}
+              <div style={{ 
+                fontSize: '12px', 
+                opacity: 0.8,
+                padding: '8px 12px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '8px',
+                display: 'inline-block'
+              }}>
+                📍 Tienda: {fetcher.data.shopInfo.domain}
               </div>
             )}
           </div>
         )}
+        
+        {/* Estilos CSS adicionales */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes bounce {
+              0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+              40% { transform: translateY(-10px); }
+              60% { transform: translateY(-5px); }
+            }
+          `
+        }} />
 
         {/* Mensaje de error */}
         {hasError && (
@@ -684,25 +825,6 @@ export default function ConfigWhatsApp() {
             </div>
           </div>
         </div>
-
-        {/* Debug información (solo en HOLA desarrollo) */}
-        {fetcher.data && (
-          <details style={{ marginTop: '20px' }}>
-            <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>
-              🔍 Debug Information
-            </summary>
-            <pre style={{
-              background: '#f1f5f9',
-              padding: '16px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              overflow: 'auto',
-              marginTop: '8px'
-            }}>
-              {JSON.stringify(fetcher.data, null, 2)}
-            </pre>
-          </details>
-        )}
       </div>
     </div>
   );

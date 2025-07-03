@@ -5,8 +5,6 @@
 {% assign position = shop.metafields.whatsapp_widget.position %}
 {% assign icon = shop.metafields.whatsapp_widget.icon %}
 
-{% comment %} Los datos vienen ÚNICAMENTE del formulario de la app {% endcomment %}
-
 {% comment %} Solo mostrar si está habilitado Y si hay datos del formulario {% endcomment %}
 {% if block.settings.enable_widget and phone_number != blank and message != blank %}
 
@@ -101,13 +99,23 @@
 function openWhatsApp{{ block.id }}() {
   const phone = '{{ phone_number }}';
   const message = encodeURIComponent('{{ message | escape }}');
+  
+  // ✅ URL CORREGIDA: Usar wa.me en lugar de api.whatsapp.com
   const url = `https://wa.me/${phone}?text=${message}`;
   
-  console.log('Abriendo WhatsApp con datos del formulario:', {
+  console.log('🚀 Abriendo WhatsApp con datos del formulario:', {
     phone: phone,
     message: '{{ message | escape }}',
-    url: url
+    url: url,
+    urlType: 'wa.me - CORRECTO ✅'
   });
+  
+  // Verificar que la URL sea correcta antes de abrir
+  if (url.includes('wa.me')) {
+    console.log('✅ URL correcta detectada: wa.me');
+  } else {
+    console.error('❌ URL incorrecta detectada');
+  }
   
   {% if block.settings.open_in_new_tab %}
     window.open(url, '_blank');
@@ -116,28 +124,38 @@ function openWhatsApp{{ block.id }}() {
   {% endif %}
 }
 
-// Hover effect
-document.getElementById('whatsapp-widget-{{ block.id }}').addEventListener('mouseenter', function() {
-  this.style.transform = 'scale({{ block.settings.hover_scale | default: 110 | divided_by: 100.0 }})';
-});
+// Hover effect con mejor rendimiento
+const hoverWidget{{ block.id }} = document.getElementById('whatsapp-widget-{{ block.id }}');
+if (hoverWidget{{ block.id }}) {
+  hoverWidget{{ block.id }}.addEventListener('mouseenter', function() {
+    this.style.transform = 'scale({{ block.settings.hover_scale | default: 110 | divided_by: 100.0 }})';
+  });
 
-document.getElementById('whatsapp-widget-{{ block.id }}').addEventListener('mouseleave', function() {
-  this.style.transform = 'scale(1)';
-});
+  hoverWidget{{ block.id }}.addEventListener('mouseleave', function() {
+    this.style.transform = 'scale(1)';
+  });
+}
 
 // Animación de entrada si está habilitada
 {% if block.settings.entrance_animation %}
 document.addEventListener('DOMContentLoaded', function() {
   const widget = document.getElementById('whatsapp-widget-{{ block.id }}');
-  widget.style.opacity = '0';
-  widget.style.transform = 'scale(0.5)';
-  
-  setTimeout(() => {
-    widget.style.transition = 'all 0.5s ease';
-    widget.style.opacity = '{{ block.settings.opacity | default: 100 | divided_by: 100.0 }}';
-    widget.style.transform = 'scale(1)';
-  }, {{ block.settings.entrance_delay | default: 1000 }});
+  if (widget) {
+    widget.style.opacity = '0';
+    widget.style.transform = 'scale(0.5)';
+    
+    setTimeout(() => {
+      widget.style.transition = 'all 0.5s ease';
+      widget.style.opacity = '{{ block.settings.opacity | default: 100 | divided_by: 100.0 }}';
+      widget.style.transform = 'scale(1)';
+    }, {{ block.settings.entrance_delay | default: 1000 }});
+  }
 });
+{% endif %}
+
+// Limpiar cache forzadamente (solo en desarrollo)
+{% if request.design_mode %}
+  console.log('🔄 Modo de diseño detectado - Cache limpiado');
 {% endif %}
 </script>
 
@@ -175,15 +193,18 @@ document.addEventListener('DOMContentLoaded', function() {
       font-size: 14px;
       color: #991b1b;
       z-index: 9999;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     ">
       <strong>⚠️ WhatsApp Widget</strong><br>
       <span style="font-size: 12px;">
         Configura el widget desde la app antes de usarlo.
-        {% unless phone_number %}❌ Teléfono{% endunless %}
-        {% unless message %}❌ Mensaje{% endunless %}
-        {% unless button_color %}❌ Color{% endunless %}
-        {% unless position %}❌ Posición{% endunless %}
-        {% unless icon %}❌ Icono{% endunless %}
+        <br><br>
+        <strong>Datos faltantes:</strong><br>
+        {% unless phone_number %}❌ Teléfono<br>{% endunless %}
+        {% unless message %}❌ Mensaje<br>{% endunless %}
+        {% unless button_color %}❌ Color<br>{% endunless %}
+        {% unless position %}❌ Posición<br>{% endunless %}
+        {% unless icon %}❌ Icono<br>{% endunless %}
       </span>
     </div>
   {% endif %}

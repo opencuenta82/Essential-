@@ -1,122 +1,259 @@
-{% comment %} Leer configuración SOLO desde metafields (sin valores por defecto) {% endcomment %}
-{% assign phone_number = shop.metafields.whatsapp_widget.phone_number %}
-{% assign message = shop.metafields.whatsapp_widget.message %}
-{% assign button_color = shop.metafields.whatsapp_widget.button_color %}
-{% assign position = shop.metafields.whatsapp_widget.position %}
-{% assign icon = shop.metafields.whatsapp_widget.icon %}
+{% comment %} Leer configuración COMPLETA desde metafields {% endcomment %}
+{% assign phone_number = shop.metafields.whatsapp_widget.phone_number.value %}
+{% assign message = shop.metafields.whatsapp_widget.message.value %}
+{% assign button_color = shop.metafields.whatsapp_widget.button_color.value %}
+{% assign position = shop.metafields.whatsapp_widget.position.value %}
+{% assign icon = shop.metafields.whatsapp_widget.icon.value %}
+
+{% comment %} Nuevos campos del formulario {% endcomment %}
+{% assign button_style = shop.metafields.whatsapp_widget.button_style.value %}
+{% assign logo_url = shop.metafields.whatsapp_widget.logo_url.value %}
+{% assign active_hours = shop.metafields.whatsapp_widget.active_hours.value %}
+{% assign start_time = shop.metafields.whatsapp_widget.start_time.value %}
+{% assign end_time = shop.metafields.whatsapp_widget.end_time.value %}
+{% assign is_active_24_hours = shop.metafields.whatsapp_widget.is_active_24_hours.value %}
+{% assign active_days = shop.metafields.whatsapp_widget.active_days.value %}
+
+{% comment %} Verificar horarios de atención con soporte para zonas horarias {% endcomment %}
+<script>
+function isWidgetActiveNow() {
+  // Si está configurado para 24 horas, siempre activo
+  {% if is_active_24_hours == 'true' %}
+    return true;
+  {% endif %}
+
+  // Obtener zona horaria del navegador del cliente
+  const clientTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const now = new Date();
+  
+  // Formatear hora actual (HH:MM) en zona horaria del cliente
+  const clientTime = now.toLocaleTimeString('en-US', { 
+    hour12: false, 
+    hour: '2-digit', 
+    minute: '2-digit',
+    timeZone: clientTimeZone 
+  }).replace(':', '');
+
+  // Convertir a número (ej: "09:00" → 900)
+  const currentTime = parseInt(clientTime);
+  const startTime = parseInt('{{ start_time }}'.replace(':', ''));
+  const endTime = parseInt('{{ end_time }}'.replace(':', ''));
+
+  // Verificar días activos (usando zona horaria del cliente)
+  const clientDay = now.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    timeZone: clientTimeZone 
+  }).toLowerCase();
+
+  const activeDays = '{{ active_days }}'.toLowerCase().split(',');
+  
+  // Validar día y horario
+  if (!activeDays.includes(clientDay)) {
+    console.log('❌ Widget inactivo: Día no permitido (' + clientDay + ') en zona horaria ' + clientTimeZone);
+    return false;
+  }
+
+  if (currentTime >= startTime && currentTime <= endTime) {
+    console.log('✅ Widget activo: ' + clientTime + ' en ' + clientTimeZone);
+    return true;
+  } else {
+    console.log('❌ Widget inactivo: Fuera de horario (' + clientTime + ' vs ' + startTime + '-' + endTime + ') en ' + clientTimeZone);
+    return false;
+  }
+}
+</script>
 
 {% comment %} Solo mostrar si está habilitado Y si hay datos del formulario {% endcomment %}
 {% if block.settings.enable_widget and phone_number != blank and message != blank %}
 
-{% comment %} Debug: Verificar datos del formulario {% endcomment %}
 <script>
-  console.log('=== WHATSAPP WIDGET DEBUG ===');
-  console.log('Metafields disponibles:', {{ shop.metafields.whatsapp_widget | json }});
-  console.log('Configuración desde formulario:', {
-    phone: '{{ phone_number }}',
-    message: '{{ message }}',
-    color: '{{ button_color }}',
-    position: '{{ position }}',
-    icon: '{{ icon }}',
-    source: 'formulario únicamente',
-    timestamp: '{{ "now" | date: "%Y-%m-%d %H:%M:%S" }}'
-  });
+// Debug: Mostrar configuración completa
+console.log('=== WHATSAPP WIDGET CONFIGURACIÓN ===', {
+  phone: '{{ phone_number }}',
+  message: '{{ message }}',
+  buttonStyle: '{{ button_style }}',
+  activeHours: '{{ active_hours }}',
+  startTime: '{{ start_time }}',
+  endTime: '{{ end_time }}',
+  isActive24Hours: '{{ is_active_24_hours }}',
+  activeDays: '{{ active_days }}'.split(','),
+  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+});
+
+// Control de visibilidad inicial
+document.addEventListener('DOMContentLoaded', function() {
+  const widget = document.getElementById('whatsapp-widget-{{ block.id }}');
   
-  // Verificar si los metafields están configurados
-  {% if shop.metafields.whatsapp_widget.phone_number %}
-    console.log('✅ Formulario configurado - phone_number:', '{{ shop.metafields.whatsapp_widget.phone_number }}');
-  {% else %}
-    console.log('❌ Formulario NO configurado - phone_number faltante');
-  {% endif %}
+  function updateWidgetVisibility() {
+    if (!isWidgetActiveNow()) {
+      console.log('⏰ Widget ocultado: Fuera del horario de atención');
+      if (widget) {
+        widget.style.display = 'none';
+        
+        // Mostrar mensaje fuera de horario (opcional)
+        const closedMessage = document.createElement('div');
+        closedMessage.id = 'whatsapp-closed-message';
+        closedMessage.style.cssText = `
+          position: fixed;
+          {% case position %}
+            {% when 'top-left' %} top: 20px; left: 20px;
+            {% when 'top-right' %} top: 20px; right: 20px;
+            {% when 'bottom-left' %} bottom: 20px; left: 20px;
+            {% else %} bottom: 20px; right: 20px;
+          {% endcase %}
+          z-index: 9998;
+          background: rgba(0,0,0,0.7);
+          color: white;
+          padding: 8px 12px;
+          border-radius: 8px;
+          font-size: 12px;
+          font-family: sans-serif;
+        `;
+        closedMessage.innerHTML = `⏳ Horario: {{ start_time }} - {{ end_time }} ({{ active_days }})`;
+        
+        // Insertar cerca del widget
+        if (widget.parentNode) {
+          widget.parentNode.insertBefore(closedMessage, widget.nextSibling);
+        }
+      }
+    } else {
+      console.log('✅ Widget visible: Dentro del horario de atención');
+      if (widget) {
+        widget.style.display = 'flex';
+        // Remover mensaje de fuera de horario si existe
+        const existingMessage = document.getElementById('whatsapp-closed-message');
+        if (existingMessage) existingMessage.remove();
+      }
+    }
+  }
+
+  // Verificar inmediatamente
+  updateWidgetVisibility();
   
-  {% if shop.metafields.whatsapp_widget.message %}
-    console.log('✅ Formulario configurado - message:', '{{ shop.metafields.whatsapp_widget.message }}');
-  {% else %}
-    console.log('❌ Formulario NO configurado - message faltante');
-  {% endif %}
-  
-  {% if shop.metafields.whatsapp_widget.button_color %}
-    console.log('✅ Formulario configurado - button_color:', '{{ shop.metafields.whatsapp_widget.button_color }}');
-  {% else %}
-    console.log('❌ Formulario NO configurado - button_color faltante');
-  {% endif %}
-  
-  {% if shop.metafields.whatsapp_widget.position %}
-    console.log('✅ Formulario configurado - position:', '{{ shop.metafields.whatsapp_widget.position }}');
-  {% else %}
-    console.log('❌ Formulario NO configurado - position faltante');
-  {% endif %}
-  
-  {% if shop.metafields.whatsapp_widget.icon %}
-    console.log('✅ Formulario configurado - icon:', '{{ shop.metafields.whatsapp_widget.icon }}');
-  {% else %}
-    console.log('❌ Formulario NO configurado - icon faltante');
-  {% endif %}
+  // Verificar cada minuto
+  setInterval(updateWidgetVisibility, 60000);
+});
 </script>
 
-{% comment %} Widget de WhatsApp usando SOLO la configuración del formulario {% endcomment %}
+{% comment %} Definir estilos según el tipo de botón seleccionado {% endcomment %}
+{% case button_style %}
+  {% when 'style1' %}
+    {% assign widget_style = 'border-radius: 50%; width: 60px; height: 60px; padding: 0; justify-content: center;' %}
+    {% assign widget_bg = button_color %}
+  {% when 'style2' %}
+    {% assign widget_style = 'border-radius: 50%; width: 60px; height: 60px; padding: 0; justify-content: center; border: 3px solid ' | append: button_color | append: '; background-color: white;' %}
+    {% assign widget_bg = 'white' %}
+  {% when 'style3' %}
+    {% assign widget_style = 'border-radius: 50%; width: 60px; height: 60px; padding: 0; justify-content: center; border: 3px solid ' | append: button_color | append: '; background-color: white;' %}
+    {% assign widget_bg = 'white' %}
+  {% when 'style4' %}
+    {% assign widget_style = 'border-radius: 16px; padding: 12px 16px; background-color: white; border: 2px solid ' | append: button_color | append: ';' %}
+    {% assign widget_bg = 'white' %}
+  {% when 'style5' %}
+    {% assign widget_style = 'border-radius: 20px; padding: 12px 16px; background-color: white; border: 2px solid ' | append: button_color | append: ';' %}
+    {% assign widget_bg = 'white' %}
+  {% else %}
+    {% assign widget_style = 'border-radius: 50px; padding: 15px 20px;' %}
+    {% assign widget_bg = button_color %}
+{% endcase %}
+
+{% comment %} Widget de WhatsApp con CONTROL DE HORARIOS {% endcomment %}
 <div id="whatsapp-widget-{{ block.id }}" style="
   position: fixed;
   {% case position %}
-    {% when 'top-left' %}
-      top: 20px;
-      left: 20px;
-    {% when 'top-right' %}
-      top: 20px;
-      right: 20px;
-    {% when 'bottom-left' %}
-      bottom: 20px;
-      left: 20px;
-    {% when 'bottom-right' %}
-      bottom: 20px;
-      right: 20px;
-    {% else %}
-      bottom: 20px;
-      right: 20px;
+    {% when 'top-left' %} top: 20px; left: 20px;
+    {% when 'top-right' %} top: 20px; right: 20px;
+    {% when 'bottom-left' %} bottom: 20px; left: 20px;
+    {% else %} bottom: 20px; right: 20px;
   {% endcase %}
   z-index: 9999;
-  background-color: {{ button_color }};
-  border-radius: {{ block.settings.border_radius | default: 50 }}px;
-  padding: 15px 20px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  background-color: {{ widget_bg | default: button_color }};
+  {{ widget_style }}
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
   font-size: {{ block.settings.font_size | default: 14 }}px;
-  color: white;
-  text-decoration: none;
-  display: flex;
+  color: {% if widget_bg == 'white' %}{{ button_color }}{% else %}white{% endif %};
+  display: none; {# Inicialmente oculto hasta verificar horario #}
   align-items: center;
   gap: 10px;
   opacity: {{ block.settings.opacity | default: 100 | divided_by: 100.0 }};
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 " onclick="openWhatsApp{{ block.id }}()">
-  <span style="font-size: {{ block.settings.font_size | default: 14 | plus: 10 }}px;">{{ icon }}</span>
-  {% if block.settings.show_text %}
-    <span style="font-weight: bold;">{{ block.settings.button_text | default: 'WhatsApp' }}</span>
-  {% endif %}
+
+  {% comment %} Contenido del botón según el estilo {% endcomment %}
+  {% case button_style %}
+    {% when 'style1', 'style2', 'style3' %}
+      {% if logo_url != blank %}
+        <img src="{{ logo_url }}" alt="WhatsApp" style="width: 32px; height: 32px; object-fit: contain;">
+      {% else %}
+        {# Iconos SVG para cada estilo #}
+      {% endif %}
+    {% when 'style4', 'style5' %}
+      {% if logo_url != blank %}
+        <img src="{{ logo_url }}" alt="WhatsApp" style="width: 20px; height: 20px; object-fit: contain;">
+      {% else %}
+        {# Iconos SVG para estilos de chat #}
+      {% endif %}
+      {% if block.settings.show_text %}
+        <span style="font-weight: 600; font-size: 12px;">{{ block.settings.button_text | default: 'Chat' }}</span>
+      {% endif %}
+    {% else %}
+      {% if logo_url != blank %}
+        <img src="{{ logo_url }}" alt="WhatsApp" style="width: 24px; height: 24px; object-fit: contain;">
+      {% else %}
+        <span style="font-size: {{ block.settings.font_size | default: 14 | plus: 10 }}px;">{{ icon }}</span>
+      {% endif %}
+      {% if block.settings.show_text %}
+        <span style="font-weight: bold;">{{ block.settings.button_text | default: 'WhatsApp' }}</span>
+      {% endif %}
+  {% endcase %}
 </div>
 
 <script>
 function openWhatsApp{{ block.id }}() {
-  const phone = '{{ phone_number }}';
-  const message = encodeURIComponent('{{ message | escape }}');
-  
-  // ✅ URL CORREGIDA: Usar wa.me en lugar de api.whatsapp.com
-  const url = `https://wa.me/${phone}?text=${message}`;
-  
-  console.log('🚀 Abriendo WhatsApp con datos del formulario:', {
-    phone: phone,
-    message: '{{ message | escape }}',
-    url: url,
-    urlType: 'wa.me - CORRECTO ✅'
-  });
-  
-  // Verificar que la URL sea correcta antes de abrir
-  if (url.includes('wa.me')) {
-    console.log('✅ URL correcta detectada: wa.me');
-  } else {
-    console.error('❌ URL incorrecta detectada');
+  if (!isWidgetActiveNow()) {
+    console.log('❌ WhatsApp bloqueado: Fuera del horario de atención');
+    
+    // Mostrar notificación temporal
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      {% case position %}
+        {% when 'top-left' %} top: 90px; left: 20px;
+        {% when 'top-right' %} top: 90px; right: 20px;
+        {% when 'bottom-left' %} bottom: 90px; left: 20px;
+        {% else %} bottom: 90px; right: 20px;
+      {% endcase %}
+      z-index: 10000;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+      max-width: 250px;
+      text-align: center;
+    `;
+    notification.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span>🕐</span>
+        <div>
+          <div style="font-size: 12px; opacity: 0.9;">Horario de atención</div>
+          <div style="font-size: 13px;">{{ start_time }} - {{ end_time }}</div>
+          <div style="font-size: 11px; opacity: 0.7;">Zona horaria: ${Intl.DateTimeFormat().resolvedOptions().timeZone}</div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+    return;
   }
   
+  // Abrir WhatsApp
+  const url = `https://wa.me/{{ phone_number }}?text=${encodeURIComponent('{{ message | escape }}')}`;
   {% if block.settings.open_in_new_tab %}
     window.open(url, '_blank');
   {% else %}
@@ -124,91 +261,46 @@ function openWhatsApp{{ block.id }}() {
   {% endif %}
 }
 
-// Hover effect con mejor rendimiento
-const hoverWidget{{ block.id }} = document.getElementById('whatsapp-widget-{{ block.id }}');
-if (hoverWidget{{ block.id }}) {
-  hoverWidget{{ block.id }}.addEventListener('mouseenter', function() {
-    this.style.transform = 'scale({{ block.settings.hover_scale | default: 110 | divided_by: 100.0 }})';
+// Hover effects
+const widget{{ block.id }} = document.getElementById('whatsapp-widget-{{ block.id }}');
+if (widget{{ block.id }}) {
+  widget{{ block.id }}.addEventListener('mouseenter', function() {
+    this.style.transform = 'scale({{ block.settings.hover_scale | default: 110 | divided_by: 100.0 }}) translateY(-2px)';
+    this.style.boxShadow = '0 12px 35px rgba(0,0,0,0.25)';
   });
-
-  hoverWidget{{ block.id }}.addEventListener('mouseleave', function() {
-    this.style.transform = 'scale(1)';
+  widget{{ block.id }}.addEventListener('mouseleave', function() {
+    this.style.transform = 'scale(1) translateY(0px)';
+    this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
   });
 }
-
-// Animación de entrada si está habilitada
-{% if block.settings.entrance_animation %}
-document.addEventListener('DOMContentLoaded', function() {
-  const widget = document.getElementById('whatsapp-widget-{{ block.id }}');
-  if (widget) {
-    widget.style.opacity = '0';
-    widget.style.transform = 'scale(0.5)';
-    
-    setTimeout(() => {
-      widget.style.transition = 'all 0.5s ease';
-      widget.style.opacity = '{{ block.settings.opacity | default: 100 | divided_by: 100.0 }}';
-      widget.style.transform = 'scale(1)';
-    }, {{ block.settings.entrance_delay | default: 1000 }});
-  }
-});
-{% endif %}
-
-// Limpiar cache forzadamente (solo en desarrollo)
-{% if request.design_mode %}
-  console.log('🔄 Modo de diseño detectado - Cache limpiado');
-{% endif %}
 </script>
 
 {% else %}
 
 {% comment %} Mensaje de configuración requerida {% endcomment %}
-{% unless block.settings.enable_widget %}
-  <script>
-    console.log('❌ WhatsApp Widget deshabilitado en la configuración del tema');
-  </script>
-{% else %}
-  <script>
-    console.log('❌ WhatsApp Widget requiere configuración del formulario');
-    console.log('Faltan datos:', {
-      phone_number: {{ phone_number | json }},
-      message: {{ message | json }},
-      button_color: {{ button_color | json }},
-      position: {{ position | json }},
-      icon: {{ icon | json }}
-    });
-  </script>
-  
-  {% comment %} Mostrar mensaje de ayuda solo en modo preview {% endcomment %}
-  {% if request.design_mode %}
-    <div style="
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #fee2e2;
-      border: 2px solid #fca5a5;
-      border-radius: 12px;
-      padding: 16px;
-      max-width: 300px;
-      font-family: system-ui, sans-serif;
-      font-size: 14px;
-      color: #991b1b;
-      z-index: 9999;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    ">
-      <strong>⚠️ WhatsApp Widget</strong><br>
-      <span style="font-size: 12px;">
-        Configura el widget desde la app antes de usarlo.
-        <br><br>
-        <strong>Datos faltantes:</strong><br>
-        {% unless phone_number %}❌ Teléfono<br>{% endunless %}
-        {% unless message %}❌ Mensaje<br>{% endunless %}
-        {% unless button_color %}❌ Color<br>{% endunless %}
-        {% unless position %}❌ Posición<br>{% endunless %}
-        {% unless icon %}❌ Icono<br>{% endunless %}
-      </span>
-    </div>
-  {% endif %}
-{% endunless %}
+{% if request.design_mode %}
+  <div style="
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #fee2e2;
+    border: 2px solid #fca5a5;
+    border-radius: 12px;
+    padding: 16px;
+    max-width: 320px;
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+    color: #991b1b;
+    z-index: 9999;
+  ">
+    <strong>⚠️ WhatsApp Widget</strong><br>
+    <span style="font-size: 12px;">
+      Configura el widget desde la app antes de usarlo.
+      {% unless phone_number %}<br>❌ Teléfono{% endunless %}
+      {% unless message %}<br>❌ Mensaje{% endunless %}
+    </span>
+  </div>
+{% endif %}
 
 {% endif %}
 
@@ -216,6 +308,9 @@ document.addEventListener('DOMContentLoaded', function() {
 {
   "name": "WhatsApp Widget",
   "target": "body",
+  "enabled_on": {
+    "groups": ["app_embed"]
+  },
   "settings": [
     {
       "type": "header",
@@ -224,30 +319,24 @@ document.addEventListener('DOMContentLoaded', function() {
     {
       "type": "checkbox",
       "id": "enable_widget",
-      "label": "Activar Widget de WhatsApp",
-      "default": true,
-      "info": "Habilita o deshabilita el widget en toda la tienda"
-    },
-    {
-      "type": "paragraph",
-      "content": "⚠️ IMPORTANTE: Debes configurar el widget desde la app primero. Todos los datos (teléfono, mensaje, color, posición, icono) vienen únicamente del formulario de configuración de la app."
+      "label": "Activar Widget",
+      "default": true
     },
     {
       "type": "header",
-      "content": "🎨 Personalización Visual"
+      "content": "🎨 Personalización"
     },
     {
       "type": "checkbox",
       "id": "show_text",
-      "label": "Mostrar texto 'WhatsApp'",
+      "label": "Mostrar texto",
       "default": true
     },
     {
       "type": "text",
       "id": "button_text",
       "label": "Texto del botón",
-      "default": "WhatsApp",
-      "info": "Solo se muestra si 'Mostrar texto' está activado"
+      "default": "Chat"
     },
     {
       "type": "range",
@@ -261,17 +350,6 @@ document.addEventListener('DOMContentLoaded', function() {
     },
     {
       "type": "range",
-      "id": "border_radius",
-      "min": 0,
-      "max": 100,
-      "step": 5,
-      "unit": "px",
-      "label": "Radio de borde",
-      "default": 50,
-      "info": "0 = cuadrado, 50 = redondeado"
-    },
-    {
-      "type": "range",
       "id": "opacity",
       "min": 50,
       "max": 100,
@@ -282,7 +360,7 @@ document.addEventListener('DOMContentLoaded', function() {
     },
     {
       "type": "header",
-      "content": "✨ Efectos y Animaciones"
+      "content": "✨ Efectos"
     },
     {
       "type": "range",
@@ -292,25 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
       "step": 5,
       "unit": "%",
       "label": "Escala al hacer hover",
-      "default": 110,
-      "info": "100% = sin efecto, 150% = máximo zoom"
-    },
-    {
-      "type": "checkbox",
-      "id": "entrance_animation",
-      "label": "Activar animación de entrada",
-      "default": false
-    },
-    {
-      "type": "range",
-      "id": "entrance_delay",
-      "min": 0,
-      "max": 5000,
-      "step": 500,
-      "unit": "ms",
-      "label": "Retraso de animación",
-      "default": 1000,
-      "info": "Solo aplica si la animación está activada"
+      "default": 110
     },
     {
       "type": "header",
@@ -319,9 +379,8 @@ document.addEventListener('DOMContentLoaded', function() {
     {
       "type": "checkbox",
       "id": "open_in_new_tab",
-      "label": "Abrir WhatsApp en nueva pestaña",
-      "default": true,
-      "info": "Si está desactivado, redirige en la misma pestaña"
+      "label": "Abrir en nueva pestaña",
+      "default": true
     }
   ]
 }

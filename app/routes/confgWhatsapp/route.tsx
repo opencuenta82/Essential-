@@ -865,7 +865,7 @@ export default function ConfigWhatsApp() {
           };
         }, [])}
 
-        {/* Horarios de Atención */}
+        {/* Horarios de Athola a a aención */}
         <div style={{ marginBottom: '32px' }}>
           <label style={{ 
             display: 'block', 

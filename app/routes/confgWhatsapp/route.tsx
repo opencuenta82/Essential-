@@ -6,7 +6,8 @@ import { ActionFunctionArgs, json } from "@remix-run/node";
 import { authenticate } from "../../shopify.server";
 
 // API ACTION para guardar configuración
-function convertTo24Hour(timeString) {
+function convertTo24Hour(timeString: string): string {
+
   if (!timeString) return timeString;
 
   // Si ya está en formato 24h (no tiene AM/PM), devolver tal como está
@@ -92,9 +93,6 @@ export async function action({ request }: ActionFunctionArgs) {
         throw new Error("No se pudo obtener shop ID con GraphQL");
       }
     } catch (graphqlError) {
-      console.log("⚠️ GraphQL falló, usando método alternativo:", graphqlError.message);
-
-      // MÉTODO 2: Usar la información de la sesión
       const shopDomain = session.shop;
       const shopName = shopDomain.replace('.myshopify.com', '');
       shopId = `gid://shopify/Shop/${shopName}`;
@@ -173,7 +171,7 @@ export async function action({ request }: ActionFunctionArgs) {
     ];
 
     // Solo agregar logo_url si no está vacío
-    if (config.logoUrl && config.logoUrl.trim() !== '') {
+    if (config.logoUrl && typeof config.logoUrl === 'string' && config.logoUrl.trim() !== '') {
       metafieldsData.push({
         namespace: "whatsapp_widget",
         key: "logo_url",
@@ -251,17 +249,22 @@ export async function action({ request }: ActionFunctionArgs) {
 
   } catch (error) {
     console.error("💥 Error guardando configuración:", error);
-    console.error("Stack trace:", error.stack);
+    console.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace');
 
     return json({
       success: false,
       error: "Error al guardar la configuración",
-      details: error.message,
-      stack: error.stack
+      details: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
     }, { status: 500 });
   }
-}
 
+}
+declare global {
+  interface Window {
+    compressAndSetImage: (file: File) => void;
+  }
+}
 export default function ConfigWhatsApp() {
   const navigate = useNavigate();
 
@@ -281,7 +284,10 @@ export default function ConfigWhatsApp() {
   const [endTime, setEndTime] = useState("18:00");
   const [activeDays, setActiveDays] = useState("monday,tuesday,wednesday,thursday,friday");
 
-  const fetcher = useFetcher();
+  // const fetcher = useFetcher();
+  const fetcher = useFetcher<any>();
+
+
 
   const createButton = async () => {
     // Validar campos requeridos
@@ -376,6 +382,8 @@ export default function ConfigWhatsApp() {
   const isSubmitting = fetcher.state === "submitting";
   const isSuccess = fetcher.data?.success;
   const hasError = fetcher.data?.success === false;
+
+
 
   return (
     <div style={{
@@ -655,7 +663,8 @@ export default function ConfigWhatsApp() {
               if (files.length > 0) {
                 const file = files[0];
                 if (file.type.startsWith('image/')) {
-                  compressAndSetImage(file);
+                  window.compressAndSetImage(file);
+
                 }
               }
             }}
@@ -664,9 +673,10 @@ export default function ConfigWhatsApp() {
               type="file"
               accept="image/*"
               onChange={(e) => {
-                const file = e.target.files[0];
+                const file = e.target.files?.[0];
                 if (file) {
-                  compressAndSetImage(file);
+                  window.compressAndSetImage(file);
+
                 }
               }}
               style={{
@@ -881,7 +891,7 @@ export default function ConfigWhatsApp() {
 
         {/* Hook para escuchar eventos de compresión */}
         {React.useEffect(() => {
-          const handleLogoUpdate = (event) => {
+          const handleLogoUpdate = (event: any) => {
             setLogoUrl(event.detail);
           };
 
@@ -1531,7 +1541,7 @@ export default function ConfigWhatsApp() {
           }}>
             ❌ Error al guardar: {
               Array.isArray(fetcher.data?.details)
-                ? fetcher.data.details.map((error, index) => (
+                ? fetcher.data.details.map((error: any, index: number) => (
                   <div key={index} style={{ margin: '4px 0' }}>
                     {error.message || JSON.stringify(error)}
                   </div>

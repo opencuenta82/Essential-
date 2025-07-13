@@ -718,9 +718,14 @@ export default function ConfigWhatsApp() {
                     ✅ Logo optimizado y cargado
                   </p>
                   <button
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                      e.preventDefault();
                       e.stopPropagation();
+                      console.log('🗑️ Eliminando imagen...');
                       setLogoUrl('');
+                    }}
+                    onMouseDown={(e: React.MouseEvent<HTMLButtonElement>) => {
+                      e.stopPropagation();
                     }}
                     style={{
                       marginTop: '8px',
@@ -731,7 +736,9 @@ export default function ConfigWhatsApp() {
                       borderRadius: '6px',
                       fontSize: '12px',
                       fontWeight: '500',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      zIndex: 1000,  // ← IMPORTANTE: Más alto
+                      position: 'relative'  // ← AGREGAR ESTO
                     }}
                   >
                     🗑️ Eliminar

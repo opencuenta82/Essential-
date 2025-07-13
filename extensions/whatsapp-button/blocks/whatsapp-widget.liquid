@@ -91,9 +91,10 @@ function isWidgetActiveNow() {
   
   if (startTime && endTime) {
     // Convertir horarios a números para comparación
-    const startTimeNumber = parseInt(startTime.replace(':', ''));
-    const endTimeNumber = parseInt(endTime.replace(':', ''));
-    
+    const startParts = startTime.split(':');
+const endParts = endTime.split(':');
+const startTimeNumber = parseInt(startParts[0]) * 100 + parseInt(startParts[1]);
+const endTimeNumber = parseInt(endParts[0]) * 100 + parseInt(endParts[1]);
     console.log('🕐 Horarios configurados:', {
       start: startTime,
       end: endTime,
@@ -102,13 +103,18 @@ function isWidgetActiveNow() {
       current: currentTime
     });
     
-    if (currentTime >= startTimeNumber && currentTime <= endTimeNumber) {
-      console.log('✅ Widget activo: Dentro del horario permitido');
-      return true;
-    } else {
-      console.log('❌ Widget inactivo: Fuera del horario permitido');
-      return false;
-    }
+ // NUEVA LÓGICA: Manejar horarios que cruzan medianoche
+if (startTimeNumber > endTimeNumber) {
+  // Horario nocturno (ej: 21:00 - 05:55)
+  const isActive = currentTime >= startTimeNumber || currentTime <= endTimeNumber;
+  console.log(isActive ? '✅ Widget activo: Horario nocturno' : '❌ Widget inactivo: Fuera de horario nocturno');
+  return isActive;
+} else {
+  // Horario normal (ej: 09:00 - 18:00)
+  const isActive = currentTime >= startTimeNumber && currentTime <= endTimeNumber;
+  console.log(isActive ? '✅ Widget activo: Horario normal' : '❌ Widget inactivo: Fuera de horario normal');
+  return isActive;
+}
   }
   
   // Si no hay horarios configurados, asumir que está activo

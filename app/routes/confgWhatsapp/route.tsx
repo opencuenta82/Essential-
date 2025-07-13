@@ -6,6 +6,27 @@ import { ActionFunctionArgs, json } from "@remix-run/node";
 import { authenticate } from "../../shopify.server";
 
 // API ACTION para guardar configuración
+function convertTo24Hour(timeString) {
+  if (!timeString) return timeString;
+
+  // Si ya está en formato 24h (no tiene AM/PM), devolver tal como está
+  if (!timeString.includes('AM') && !timeString.includes('PM')) {
+    return timeString;
+  }
+
+  const [time, period] = timeString.split(' ');
+  const [hours, minutes] = time.split(':');
+  let hour24 = parseInt(hours);
+
+  if (period === 'PM' && hour24 !== 12) {
+    hour24 += 12;
+  } else if (period === 'AM' && hour24 === 12) {
+    hour24 = 0;
+  }
+
+  return `${hour24.toString().padStart(2, '0')}:${minutes}`;
+}
+
 export async function action({ request }: ActionFunctionArgs) {
   try {
     const { admin, session } = await authenticate.admin(request);
@@ -17,8 +38,8 @@ export async function action({ request }: ActionFunctionArgs) {
     // Verificar que la sesión existe
     if (!session || !session.shop) {
       console.error("❌ Sesión no válida:", session);
-      return json({ 
-        success: false, 
+      return json({
+        success: false,
         error: "Sesión no válida",
         details: "No se pudo obtener la información de la tienda"
       }, { status: 401 });
@@ -30,8 +51,9 @@ export async function action({ request }: ActionFunctionArgs) {
     });
 
     const formData = await request.formData();
-    
+
     // Extraer datos del formulario
+    // ✅ DESPUÉS (agregar estas 2 líneas)
     const config = {
       phoneNumber: formData.get("phoneWithCode"),
       message: formData.get("startMessage"),
@@ -41,12 +63,11 @@ export async function action({ request }: ActionFunctionArgs) {
       buttonStyle: formData.get("buttonStyle"),
       logoUrl: formData.get("logoUrl"),
       activeHours: formData.get("activeHours"),
-      startTime: formData.get("startTime"),
-      endTime: formData.get("endTime"),
+      startTime: formData.get("startTime"),        // ← AGREGAR
+      endTime: formData.get("endTime"),            // ← AGREGAR
       isActive24Hours: formData.get("isActive24Hours"),
       activeDays: formData.get("activeDays"),
     };
-
     console.log("Configuración recibida:", config);
 
     // MÉTODO 1: Intentar obtener Shop ID con GraphQL
@@ -61,9 +82,9 @@ export async function action({ request }: ActionFunctionArgs) {
           }
         }
       `);
-      
+
       const shopResponse = await shopQuery.json();
-      
+
       if (shopResponse.data?.shop?.id) {
         shopId = shopResponse.data.shop.id;
         console.log("✅ Shop ID obtenido con GraphQL:", shopId);
@@ -72,7 +93,7 @@ export async function action({ request }: ActionFunctionArgs) {
       }
     } catch (graphqlError) {
       console.log("⚠️ GraphQL falló, usando método alternativo:", graphqlError.message);
-      
+
       // MÉTODO 2: Usar la información de la sesión
       const shopDomain = session.shop;
       const shopName = shopDomain.replace('.myshopify.com', '');
@@ -89,14 +110,14 @@ export async function action({ request }: ActionFunctionArgs) {
         type: "single_line_text_field",
       },
       {
-        namespace: "whatsapp_widget", 
+        namespace: "whatsapp_widget",
         key: "message",
         value: String(config.message || ""),
         type: "multi_line_text_field",
       },
       {
         namespace: "whatsapp_widget",
-        key: "position", 
+        key: "position",
         value: String(config.position || ""),
         type: "single_line_text_field",
       },
@@ -200,14 +221,14 @@ export async function action({ request }: ActionFunctionArgs) {
     });
 
     const result = await mutation.json();
-    
+
     console.log("📊 Resultado completo de GraphQL:", JSON.stringify(result, null, 2));
-    
+
     // Verificar errores
     if (result.data?.metafieldsSet?.userErrors?.length > 0) {
       console.error("❌ Errores en metafields:", result.data.metafieldsSet.userErrors);
-      return json({ 
-        success: false, 
+      return json({
+        success: false,
         error: "Error al guardar metafields",
         details: result.data.metafieldsSet.userErrors
       }, { status: 400 });
@@ -217,8 +238,8 @@ export async function action({ request }: ActionFunctionArgs) {
     const savedMetafields = result.data?.metafieldsSet?.metafields || [];
     console.log("✅ Metafields guardados exitosamente:", savedMetafields);
 
-    return json({ 
-      success: true, 
+    return json({
+      success: true,
       message: "Configuración guardada exitosamente",
       config,
       savedMetafields,
@@ -227,13 +248,13 @@ export async function action({ request }: ActionFunctionArgs) {
         shopId: shopId
       }
     });
-    
+
   } catch (error) {
     console.error("💥 Error guardando configuración:", error);
     console.error("Stack trace:", error.stack);
-    
-    return json({ 
-      success: false, 
+
+    return json({
+      success: false,
       error: "Error al guardar la configuración",
       details: error.message,
       stack: error.stack
@@ -243,7 +264,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export default function ConfigWhatsApp() {
   const navigate = useNavigate();
-  
+
   // Estados existentes
   const [position, setPosition] = useState("bottom-right");
   const [color, setColor] = useState("#25D366");
@@ -251,7 +272,7 @@ export default function ConfigWhatsApp() {
   const [countryCode, setCountryCode] = useState("51");
   const [phoneNumber, setPhoneNumber] = useState("999999999");
   const [startMessage, setStartMessage] = useState("¡Hola! Me interesa tu producto");
-  
+
   // Nuevos estados
   const [buttonStyle, setButtonStyle] = useState("style1");
   const [logoUrl, setLogoUrl] = useState("");
@@ -259,7 +280,7 @@ export default function ConfigWhatsApp() {
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("18:00");
   const [activeDays, setActiveDays] = useState("monday,tuesday,wednesday,thursday,friday");
-  
+
   const fetcher = useFetcher();
 
   const createButton = async () => {
@@ -281,13 +302,16 @@ export default function ConfigWhatsApp() {
     formData.append("position", position);
     formData.append("color", color);
     formData.append("icon", icon);
-    
+
     // Nuevos campos
     formData.append("buttonStyle", buttonStyle);
     formData.append("logoUrl", logoUrl);
     formData.append("activeHours", isActive24Hours ? "24hours" : "custom");
-    formData.append("startTime", startTime);
-    formData.append("endTime", endTime);
+    // formData.append("startTime", startTime);
+    // formData.append("endTime", endTime);
+
+    formData.append("startTime", convertTo24Hour(startTime));
+    formData.append("endTime", convertTo24Hour(endTime));
     formData.append("isActive24Hours", isActive24Hours.toString());
     formData.append("activeDays", activeDays);
 
@@ -300,8 +324,11 @@ export default function ConfigWhatsApp() {
       buttonStyle,
       logoUrl,
       activeHours: isActive24Hours ? "24hours" : "custom",
-      startTime,
-      endTime,
+      // startTime,
+      // endTime,
+
+      startTime: convertTo24Hour(startTime),
+      endTime: convertTo24Hour(endTime),
       isActive24Hours,
       activeDays
     });
@@ -316,28 +343,28 @@ export default function ConfigWhatsApp() {
   React.useEffect(() => {
     if (fetcher.data?.success && fetcher.data?.shopInfo?.domain) {
       console.log("✅ Datos recibidos, iniciando redirección...");
-      
+
       // Extraer el nombre de la tienda del dominio
       const shopDomain = fetcher.data.shopInfo.domain;
       const shopName = shopDomain.replace('.myshopify.com', '');
-      
-      // Construir la URL de integraciones de aplicaciones
+
+      // Construir la URL de integraciones   de aplicaciones
       const themeEditorUrl = `https://admin.shopify.com/store/${shopName}/themes/current/editor?context=apps`;
-      
+
       console.log("🔗 URL construida:", themeEditorUrl);
       console.log("🔗 Shop name:", shopName);
-      
+
       // Redirigir después de 2 segundos
       const redirectTimeout = setTimeout(() => {
         console.log("🚀 Ejecutando redirección...");
         window.open(themeEditorUrl, '_blank');
-        
+
         // RESETEAR el formulario después de la redirección
         setTimeout(() => {
           console.log("🔄 Reseteando formulario...");
           window.location.reload();
         }, 1000);
-        
+
       }, 2000);
 
       // Limpiar timeout si el componente se desmonta
@@ -351,21 +378,21 @@ export default function ConfigWhatsApp() {
   const hasError = fetcher.data?.success === false;
 
   return (
-    <div style={{ 
+    <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
       padding: '60px 20px'
     }}>
-      
+
       {/* Header */}
       <div style={{
         textAlign: 'center',
         marginBottom: '60px',
         color: 'white'
       }}>
-        <h1 style={{ 
-          fontSize: '48px', 
+        <h1 style={{
+          fontSize: '48px',
           fontWeight: '800',
           margin: '0 0 20px 0',
           letterSpacing: '-2px',
@@ -373,7 +400,7 @@ export default function ConfigWhatsApp() {
         }}>
           🚀 Creador de Botones WhatsApp
         </h1>
-        <p style={{ 
+        <p style={{
           fontSize: '20px',
           margin: '0',
           fontWeight: '400',
@@ -397,9 +424,9 @@ export default function ConfigWhatsApp() {
 
         {/* Tipo de Botón */}
         <div style={{ marginBottom: '32px' }}>
-          <label style={{ 
-            display: 'block', 
-            marginBottom: '16px', 
+          <label style={{
+            display: 'block',
+            marginBottom: '16px',
             fontWeight: '700',
             color: '#0f172a',
             fontSize: '16px',
@@ -418,125 +445,125 @@ export default function ConfigWhatsApp() {
             overflowX: 'auto'
           }}>
             {[
-              { 
-                value: "style1", 
+              {
+                value: "style1",
                 name: "Estilo 1",
                 svg: (
                   <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                     {/* Sombra del círculo */}
-                    <circle cx="24" cy="25" r="21" fill="#1A202C" opacity="0.3"/>
-                    
+                    <circle cx="24" cy="25" r="21" fill="#1A202C" opacity="0.3" />
+
                     {/* Círculo principal */}
-                    <circle cx="24" cy="24" r="21" fill="#2D3748"/>
-                    
+                    <circle cx="24" cy="24" r="21" fill="#2D3748" />
+
                     {/* Logo WhatsApp simplificado y elegante */}
-                    <path d="M24 10C16.27 10 10 16.27 10 24C10 26.65 10.81 29.11 12.2 31.2L10 38L17.05 35.85C19.05 37.1 21.45 38 24 38C31.73 38 38 31.73 38 24C38 16.27 31.73 10 24 10Z" fill="white"/>
-                    
+                    <path d="M24 10C16.27 10 10 16.27 10 24C10 26.65 10.81 29.11 12.2 31.2L10 38L17.05 35.85C19.05 37.1 21.45 38 24 38C31.73 38 38 31.73 38 24C38 16.27 31.73 10 24 10Z" fill="white" />
+
                     {/* Detalle del teléfono dentro */}
-                    <path d="M29.2 27.9C28.9 27.75 27.4 27 27.1 26.9C26.8 26.8 26.6 26.75 26.4 27.05C26.2 27.35 25.65 27.9 25.45 28.1C25.25 28.3 25.05 28.35 24.75 28.2C24.45 28.05 23.45 27.7 22.25 26.65C21.3 25.85 20.65 24.85 20.45 24.55C20.25 24.25 20.43 24.05 20.58 23.9C20.71 23.77 20.88 23.55 21.03 23.35C21.18 23.15 21.23 23 21.28 22.8C21.33 22.6 21.31 22.42 21.23 22.27C21.15 22.12 20.65 20.62 20.45 20.02C20.25 19.45 20.05 19.52 19.87 19.51C19.7 19.5 19.52 19.5 19.34 19.5C19.16 19.5 18.86 19.57 18.56 19.87C18.26 20.17 17.5 20.82 17.5 22.32C17.5 23.82 18.6 25.27 18.75 25.45C18.9 25.63 20.65 28.57 23.45 29.65C24.12 29.95 24.64 30.12 25.05 30.25C25.72 30.47 26.33 30.44 26.81 30.37C27.34 30.29 28.52 29.7 28.78 29.05C29.04 28.4 29.04 27.85 28.96 27.72C28.88 27.59 28.7 27.51 28.4 27.36L29.2 27.9Z" fill="#2D3748"/>
-                    
+                    <path d="M29.2 27.9C28.9 27.75 27.4 27 27.1 26.9C26.8 26.8 26.6 26.75 26.4 27.05C26.2 27.35 25.65 27.9 25.45 28.1C25.25 28.3 25.05 28.35 24.75 28.2C24.45 28.05 23.45 27.7 22.25 26.65C21.3 25.85 20.65 24.85 20.45 24.55C20.25 24.25 20.43 24.05 20.58 23.9C20.71 23.77 20.88 23.55 21.03 23.35C21.18 23.15 21.23 23 21.28 22.8C21.33 22.6 21.31 22.42 21.23 22.27C21.15 22.12 20.65 20.62 20.45 20.02C20.25 19.45 20.05 19.52 19.87 19.51C19.7 19.5 19.52 19.5 19.34 19.5C19.16 19.5 18.86 19.57 18.56 19.87C18.26 20.17 17.5 20.82 17.5 22.32C17.5 23.82 18.6 25.27 18.75 25.45C18.9 25.63 20.65 28.57 23.45 29.65C24.12 29.95 24.64 30.12 25.05 30.25C25.72 30.47 26.33 30.44 26.81 30.37C27.34 30.29 28.52 29.7 28.78 29.05C29.04 28.4 29.04 27.85 28.96 27.72C28.88 27.59 28.7 27.51 28.4 27.36L29.2 27.9Z" fill="#2D3748" />
+
                     {/* Brillo sutil */}
-                    <ellipse cx="18" cy="16" rx="6" ry="4" fill="white" opacity="0.2"/>
+                    <ellipse cx="18" cy="16" rx="6" ry="4" fill="white" opacity="0.2" />
                   </svg>
                 )
               },
-              { 
-                value: "style2", 
+              {
+                value: "style2",
                 name: "Estilo 2",
                 svg: (
                   <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                     {/* Sombra del círculo */}
-                    <circle cx="24" cy="25" r="21" fill="#E2E8F0" opacity="0.8"/>
-                    
+                    <circle cx="24" cy="25" r="21" fill="#E2E8F0" opacity="0.8" />
+
                     {/* Círculo principal con borde */}
-                    <circle cx="24" cy="24" r="21" fill="white" stroke="#2D3748" strokeWidth="2.5"/>
-                    
+                    <circle cx="24" cy="24" r="21" fill="white" stroke="#2D3748" strokeWidth="2.5" />
+
                     {/* Logo WhatsApp negro elegante */}
-                    <path d="M24 10C16.27 10 10 16.27 10 24C10 26.65 10.81 29.11 12.2 31.2L10 38L17.05 35.85C19.05 37.1 21.45 38 24 38C31.73 38 38 31.73 38 24C38 16.27 31.73 10 24 10Z" fill="#2D3748"/>
-                    
+                    <path d="M24 10C16.27 10 10 16.27 10 24C10 26.65 10.81 29.11 12.2 31.2L10 38L17.05 35.85C19.05 37.1 21.45 38 24 38C31.73 38 38 31.73 38 24C38 16.27 31.73 10 24 10Z" fill="#2D3748" />
+
                     {/* Detalle del teléfono dentro */}
-                    <path d="M29.2 27.9C28.9 27.75 27.4 27 27.1 26.9C26.8 26.8 26.6 26.75 26.4 27.05C26.2 27.35 25.65 27.9 25.45 28.1C25.25 28.3 25.05 28.35 24.75 28.2C24.45 28.05 23.45 27.7 22.25 26.65C21.3 25.85 20.65 24.85 20.45 24.55C20.25 24.25 20.43 24.05 20.58 23.9C20.71 23.77 20.88 23.55 21.03 23.35C21.18 23.15 21.23 23 21.28 22.8C21.33 22.6 21.31 22.42 21.23 22.27C21.15 22.12 20.65 20.62 20.45 20.02C20.25 19.45 20.05 19.52 19.87 19.51C19.7 19.5 19.52 19.5 19.34 19.5C19.16 19.5 18.86 19.57 18.56 19.87C18.26 20.17 17.5 20.82 17.5 22.32C17.5 23.82 18.6 25.27 18.75 25.45C18.9 25.63 20.65 28.57 23.45 29.65C24.12 29.95 24.64 30.12 25.05 30.25C25.72 30.47 26.33 30.44 26.81 30.37C27.34 30.29 28.52 29.7 28.78 29.05C29.04 28.4 29.04 27.85 28.96 27.72C28.88 27.59 28.7 27.51 28.4 27.36L29.2 27.9Z" fill="white"/>
-                    
+                    <path d="M29.2 27.9C28.9 27.75 27.4 27 27.1 26.9C26.8 26.8 26.6 26.75 26.4 27.05C26.2 27.35 25.65 27.9 25.45 28.1C25.25 28.3 25.05 28.35 24.75 28.2C24.45 28.05 23.45 27.7 22.25 26.65C21.3 25.85 20.65 24.85 20.45 24.55C20.25 24.25 20.43 24.05 20.58 23.9C20.71 23.77 20.88 23.55 21.03 23.35C21.18 23.15 21.23 23 21.28 22.8C21.33 22.6 21.31 22.42 21.23 22.27C21.15 22.12 20.65 20.62 20.45 20.02C20.25 19.45 20.05 19.52 19.87 19.51C19.7 19.5 19.52 19.5 19.34 19.5C19.16 19.5 18.86 19.57 18.56 19.87C18.26 20.17 17.5 20.82 17.5 22.32C17.5 23.82 18.6 25.27 18.75 25.45C18.9 25.63 20.65 28.57 23.45 29.65C24.12 29.95 24.64 30.12 25.05 30.25C25.72 30.47 26.33 30.44 26.81 30.37C27.34 30.29 28.52 29.7 28.78 29.05C29.04 28.4 29.04 27.85 28.96 27.72C28.88 27.59 28.7 27.51 28.4 27.36L29.2 27.9Z" fill="white" />
+
                     {/* Brillo interior */}
-                    <ellipse cx="18" cy="16" rx="6" ry="4" fill="white" opacity="0.4"/>
+                    <ellipse cx="18" cy="16" rx="6" ry="4" fill="white" opacity="0.4" />
                   </svg>
                 )
               },
-              { 
-                value: "style3", 
+              {
+                value: "style3",
                 name: "Estilo 3",
                 svg: (
                   <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                     {/* Sombra del círculo */}
-                    <circle cx="24" cy="25" r="21" fill="#E2E8F0" opacity="0.8"/>
-                    
+                    <circle cx="24" cy="25" r="21" fill="#E2E8F0" opacity="0.8" />
+
                     {/* Círculo principal */}
-                    <circle cx="24" cy="24" r="21" fill="white" stroke="#2D3748" strokeWidth="2.5"/>
-                    
+                    <circle cx="24" cy="24" r="21" fill="white" stroke="#2D3748" strokeWidth="2.5" />
+
                     {/* Líneas de chat elegantes */}
                     <g>
                       {/* Línea 1 - más corta */}
-                      <rect x="14" y="16" width="8" height="2.5" rx="1.25" fill="#2D3748"/>
-                      <rect x="26" y="16" width="8" height="2.5" rx="1.25" fill="#2D3748"/>
-                      
+                      <rect x="14" y="16" width="8" height="2.5" rx="1.25" fill="#2D3748" />
+                      <rect x="26" y="16" width="8" height="2.5" rx="1.25" fill="#2D3748" />
+
                       {/* Línea 2 - más larga */}
-                      <rect x="14" y="22" width="20" height="2.5" rx="1.25" fill="#2D3748"/>
-                      
+                      <rect x="14" y="22" width="20" height="2.5" rx="1.25" fill="#2D3748" />
+
                       {/* Línea 3 - mediana */}
-                      <rect x="14" y="28" width="14" height="2.5" rx="1.25" fill="#2D3748"/>
+                      <rect x="14" y="28" width="14" height="2.5" rx="1.25" fill="#2D3748" />
                     </g>
-                    
+
                     {/* Brillo sutil */}
-                    <ellipse cx="18" cy="14" rx="6" ry="3" fill="white" opacity="0.4"/>
+                    <ellipse cx="18" cy="14" rx="6" ry="3" fill="white" opacity="0.4" />
                   </svg>
                 )
               },
-              { 
-                value: "style4", 
+              {
+                value: "style4",
                 name: "Estilo 4",
                 svg: (
                   <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                    <path d="M8 12C8 9.79086 9.79086 8 12 8H36C38.2091 8 40 9.79086 40 12V28C40 30.2091 38.2091 32 36 32H20L12 40V32C9.79086 32 8 30.2091 8 28V12Z" fill="white" stroke="#2D3748" strokeWidth="2"/>
-                    <path d="M16 16H20" stroke="#2D3748" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M24 16H32" stroke="#2D3748" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M16 22H28" stroke="#2D3748" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M8 12C8 9.79086 9.79086 8 12 8H36C38.2091 8 40 9.79086 40 12V28C40 30.2091 38.2091 32 36 32H20L12 40V32C9.79086 32 8 30.2091 8 28V12Z" fill="white" stroke="#2D3748" strokeWidth="2" />
+                    <path d="M16 16H20" stroke="#2D3748" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M24 16H32" stroke="#2D3748" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M16 22H28" stroke="#2D3748" strokeWidth="2" strokeLinecap="round" />
                   </svg>
                 )
               },
-              { 
-                value: "style5", 
+              {
+                value: "style5",
                 name: "Estilo 5",
                 svg: (
                   <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                     {/* Sombra del globo para profundidad */}
-                    <path d="M9 14C9 11.2386 11.2386 9 14 9H34C36.7614 9 39 11.2386 39 14V24C39 26.7614 36.7614 29 34 29H19L12 35V29C10.3431 29 9 27.6569 9 26V14Z" fill="#E2E8F0"/>
-                    
+                    <path d="M9 14C9 11.2386 11.2386 9 14 9H34C36.7614 9 39 11.2386 39 14V24C39 26.7614 36.7614 29 34 29H19L12 35V29C10.3431 29 9 27.6569 9 26V14Z" fill="#E2E8F0" />
+
                     {/* Globo principal */}
-                    <path d="M8 13C8 10.2386 10.2386 8 13 8H33C35.7614 8 38 10.2386 38 13V23C38 25.7614 35.7614 28 33 28H18L11 34V28C9.34315 28 8 26.6569 8 25V13Z" fill="white" stroke="#2D3748" strokeWidth="2"/>
-                    
+                    <path d="M8 13C8 10.2386 10.2386 8 13 8H33C35.7614 8 38 10.2386 38 13V23C38 25.7614 35.7614 28 33 28H18L11 34V28C9.34315 28 8 26.6569 8 25V13Z" fill="white" stroke="#2D3748" strokeWidth="2" />
+
                     {/* Tres puntitos elegantes con gradiente y sombra */}
                     <g>
                       {/* Primer punto */}
                       <circle cx="18" cy="18" r="2.5" fill="#2D3748">
-                        <animate attributeName="opacity" values="1;0.5;1" dur="1.5s" repeatCount="indefinite" begin="0s"/>
+                        <animate attributeName="opacity" values="1;0.5;1" dur="1.5s" repeatCount="indefinite" begin="0s" />
                       </circle>
-                      <circle cx="18" cy="18" r="1.5" fill="#4A5568" opacity="0.8"/>
-                      
+                      <circle cx="18" cy="18" r="1.5" fill="#4A5568" opacity="0.8" />
+
                       {/* Segundo punto */}
                       <circle cx="24" cy="18" r="2.5" fill="#2D3748">
-                        <animate attributeName="opacity" values="1;0.5;1" dur="1.5s" repeatCount="indefinite" begin="0.5s"/>
+                        <animate attributeName="opacity" values="1;0.5;1" dur="1.5s" repeatCount="indefinite" begin="0.5s" />
                       </circle>
-                      <circle cx="24" cy="18" r="1.5" fill="#4A5568" opacity="0.8"/>
-                      
+                      <circle cx="24" cy="18" r="1.5" fill="#4A5568" opacity="0.8" />
+
                       {/* Tercer punto */}
                       <circle cx="30" cy="18" r="2.5" fill="#2D3748">
-                        <animate attributeName="opacity" values="1;0.5;1" dur="1.5s" repeatCount="indefinite" begin="1s"/>
+                        <animate attributeName="opacity" values="1;0.5;1" dur="1.5s" repeatCount="indefinite" begin="1s" />
                       </circle>
-                      <circle cx="30" cy="18" r="1.5" fill="#4A5568" opacity="0.8"/>
+                      <circle cx="30" cy="18" r="1.5" fill="#4A5568" opacity="0.8" />
                     </g>
-                    
+
                     {/* Brillo sutil en el globo */}
-                    <ellipse cx="20" cy="12" rx="8" ry="3" fill="white" opacity="0.3"/>
+                    <ellipse cx="20" cy="12" rx="8" ry="3" fill="white" opacity="0.3" />
                   </svg>
                 )
               }
@@ -556,8 +583,8 @@ export default function ConfigWhatsApp() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   position: 'relative',
-                  boxShadow: buttonStyle === styleOption.value 
-                    ? '0 4px 12px rgba(79, 70, 229, 0.3)' 
+                  boxShadow: buttonStyle === styleOption.value
+                    ? '0 4px 12px rgba(79, 70, 229, 0.3)'
                     : '0 2px 8px rgba(0,0,0,0.1)'
                 }}
               >
@@ -576,7 +603,7 @@ export default function ConfigWhatsApp() {
                     justifyContent: 'center'
                   }}>
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M10 3L4.5 8.5L2 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M10 3L4.5 8.5L2 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                 )}
@@ -587,9 +614,9 @@ export default function ConfigWhatsApp() {
 
         {/* Logo personalizado con subida de archivo */}
         <div style={{ marginBottom: '32px' }}>
-          <label style={{ 
-            display: 'block', 
-            marginBottom: '12px', 
+          <label style={{
+            display: 'block',
+            marginBottom: '12px',
             fontWeight: '700',
             color: '#0f172a',
             fontSize: '16px',
@@ -598,7 +625,7 @@ export default function ConfigWhatsApp() {
           }}>
             🖼️ Logo Personalizado (Opcional)
           </label>
-          
+
           {/* Área de subida de archivo */}
           <div style={{
             position: 'relative',
@@ -610,28 +637,28 @@ export default function ConfigWhatsApp() {
             transition: 'all 0.3s ease',
             cursor: 'pointer'
           }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            e.currentTarget.style.borderColor = '#6366f1';
-            e.currentTarget.style.backgroundColor = '#f0f9ff';
-          }}
-          onDragLeave={(e) => {
-            e.currentTarget.style.borderColor = '#e2e8f0';
-            e.currentTarget.style.backgroundColor = '#f8fafc';
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            e.currentTarget.style.borderColor = '#e2e8f0';
-            e.currentTarget.style.backgroundColor = '#f8fafc';
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-              const file = files[0];
-              if (file.type.startsWith('image/')) {
-                compressAndSetImage(file);
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.currentTarget.style.borderColor = '#6366f1';
+              e.currentTarget.style.backgroundColor = '#f0f9ff';
+            }}
+            onDragLeave={(e) => {
+              e.currentTarget.style.borderColor = '#e2e8f0';
+              e.currentTarget.style.backgroundColor = '#f8fafc';
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.currentTarget.style.borderColor = '#e2e8f0';
+              e.currentTarget.style.backgroundColor = '#f8fafc';
+
+              const files = e.dataTransfer.files;
+              if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                  compressAndSetImage(file);
+                }
               }
-            }
-          }}
+            }}
           >
             <input
               type="file"
@@ -652,7 +679,7 @@ export default function ConfigWhatsApp() {
                 cursor: 'pointer'
               }}
             />
-            
+
             {logoUrl ? (
               <div style={{
                 display: 'flex',
@@ -660,9 +687,9 @@ export default function ConfigWhatsApp() {
                 alignItems: 'center',
                 gap: '12px'
               }}>
-                <img 
-                  src={logoUrl} 
-                  alt="Logo preview" 
+                <img
+                  src={logoUrl}
+                  alt="Logo preview"
                   style={{
                     width: '64px',
                     height: '64px',
@@ -727,7 +754,7 @@ export default function ConfigWhatsApp() {
               </div>
             )}
           </div>
-          
+
           <p style={{
             margin: '8px 0 0 0',
             fontSize: '12px',
@@ -857,9 +884,9 @@ export default function ConfigWhatsApp() {
           const handleLogoUpdate = (event) => {
             setLogoUrl(event.detail);
           };
-          
+
           document.addEventListener('updateLogo', handleLogoUpdate);
-          
+
           return () => {
             document.removeEventListener('updateLogo', handleLogoUpdate);
           };
@@ -867,9 +894,9 @@ export default function ConfigWhatsApp() {
 
         {/* Horarios de Athola a a aención */}
         <div style={{ marginBottom: '32px' }}>
-          <label style={{ 
-            display: 'block', 
-            marginBottom: '16px', 
+          <label style={{
+            display: 'block',
+            marginBottom: '16px',
             fontWeight: '700',
             color: '#0f172a',
             fontSize: '16px',
@@ -878,7 +905,7 @@ export default function ConfigWhatsApp() {
           }}>
             🕐 Horarios de Atención
           </label>
-          
+
           {/* Toggle 24 horas */}
           <div style={{
             display: 'flex',
@@ -1034,9 +1061,9 @@ export default function ConfigWhatsApp() {
 
         {/* Ubicación */}
         <div style={{ marginBottom: '32px' }}>
-          <label style={{ 
-            display: 'block', 
-            marginBottom: '12px', 
+          <label style={{
+            display: 'block',
+            marginBottom: '12px',
             fontWeight: '700',
             color: '#0f172a',
             fontSize: '16px',
@@ -1075,9 +1102,9 @@ export default function ConfigWhatsApp() {
 
         {/* Color */}
         <div style={{ marginBottom: '32px' }}>
-          <label style={{ 
-            display: 'block', 
-            marginBottom: '12px', 
+          <label style={{
+            display: 'block',
+            marginBottom: '12px',
             fontWeight: '700',
             color: '#0f172a',
             fontSize: '16px',
@@ -1115,8 +1142,8 @@ export default function ConfigWhatsApp() {
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
                   transform: color === colorOption.value ? 'scale(1.1)' : 'scale(1)',
-                  boxShadow: color === colorOption.value 
-                    ? '0 8px 25px rgba(15, 23, 42, 0.3)' 
+                  boxShadow: color === colorOption.value
+                    ? '0 8px 25px rgba(15, 23, 42, 0.3)'
                     : '0 4px 15px rgba(0,0,0,0.1)',
                   position: 'relative'
                 }}
@@ -1145,19 +1172,19 @@ export default function ConfigWhatsApp() {
             fontWeight: '500',
             textAlign: 'center'
           }}>
-            Seleccionado: {color === "#25D366" ? "Verde WhatsApp" : 
-                          color === "#6366f1" ? "Índigo" :
-                          color === "#ec4899" ? "Rosa" :
-                          color === "#f59e0b" ? "Ámbar" :
-                          color === "#8b5cf6" ? "Púrpura" : "Gris Oscuro"}
+            Seleccionado: {color === "#25D366" ? "Verde WhatsApp" :
+              color === "#6366f1" ? "Índigo" :
+                color === "#ec4899" ? "Rosa" :
+                  color === "#f59e0b" ? "Ámbar" :
+                    color === "#8b5cf6" ? "Púrpura" : "Gris Oscuro"}
           </p>
         </div>
 
         {/* Icono */}
         <div style={{ marginBottom: '32px' }}>
-          <label style={{ 
-            display: 'block', 
-            marginBottom: '12px', 
+          <label style={{
+            display: 'block',
+            marginBottom: '12px',
             fontWeight: '700',
             color: '#0f172a',
             fontSize: '16px',
@@ -1200,9 +1227,9 @@ export default function ConfigWhatsApp() {
 
         {/* Número WhatsApp */}
         <div style={{ marginBottom: '32px' }}>
-          <label style={{ 
-            display: 'block', 
-            marginBottom: '12px', 
+          <label style={{
+            display: 'block',
+            marginBottom: '12px',
             fontWeight: '700',
             color: '#0f172a',
             fontSize: '16px',
@@ -1261,9 +1288,9 @@ export default function ConfigWhatsApp() {
 
         {/* Mensaje */}
         <div style={{ marginBottom: '40px' }}>
-          <label style={{ 
-            display: 'block', 
-            marginBottom: '12px', 
+          <label style={{
+            display: 'block',
+            marginBottom: '12px',
             fontWeight: '700',
             color: '#0f172a',
             fontSize: '16px',
@@ -1295,13 +1322,13 @@ export default function ConfigWhatsApp() {
         </div>
 
         {/* Botón actualizado con animaciones */}
-        <button 
+        <button
           onClick={createButton}
           disabled={isSubmitting || isSuccess}
           style={{
             width: '100%',
             padding: '20px 32px',
-            background: isSubmitting 
+            background: isSubmitting
               ? 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)'
               : hasError
                 ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
@@ -1315,9 +1342,9 @@ export default function ConfigWhatsApp() {
             fontWeight: '700',
             cursor: (isSubmitting || isSuccess) ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s ease',
-            boxShadow: isSuccess 
-              ? '0 10px 30px rgba(16, 185, 129, 0.4)' 
-              : hasError 
+            boxShadow: isSuccess
+              ? '0 10px 30px rgba(16, 185, 129, 0.4)'
+              : hasError
                 ? '0 10px 30px rgba(239, 68, 68, 0.4)'
                 : '0 10px 30px rgba(99, 102, 241, 0.4)',
             letterSpacing: '0.5px',
@@ -1345,7 +1372,7 @@ export default function ConfigWhatsApp() {
                 animation: 'spin 1s linear infinite'
               }}></div>
             )}
-            
+
             {isSuccess && (
               <div style={{
                 width: '20px',
@@ -1364,22 +1391,22 @@ export default function ConfigWhatsApp() {
                 }}></div>
               </div>
             )}
-            
+
             {!isSubmitting && !isSuccess && !hasError && '✨'}
             {hasError && '❌'}
-            
+
             <span>
-              {isSubmitting 
-                ? 'Guardando configuración...' 
+              {isSubmitting
+                ? 'Guardando configuración...'
                 : hasError
                   ? 'Error - Intentar de nuevo'
-                  : isSuccess 
+                  : isSuccess
                     ? '¡Guardado! Redirigiendo...'
                     : 'Crear Botón WhatsApp'
               }
             </span>
           </span>
-          
+
           {/* Animación de progreso para estado de éxito */}
           {isSuccess && (
             <div style={{
@@ -1393,7 +1420,7 @@ export default function ConfigWhatsApp() {
             }}></div>
           )}
         </button>
-        
+
         {/* CSS Animations */}
         <style dangerouslySetInnerHTML={{
           __html: `
@@ -1433,18 +1460,18 @@ export default function ConfigWhatsApp() {
             boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)',
             animation: 'pulse 2s ease-in-out infinite'
           }}>
-            <div style={{ 
-              fontSize: '24px', 
+            <div style={{
+              fontSize: '24px',
               marginBottom: '8px',
               animation: 'bounce 1s ease-in-out infinite'
             }}>
               🎉
             </div>
-            
+
             <div style={{ fontSize: '18px', marginBottom: '8px' }}>
               ¡Configuración guardada exitosamente!
             </div>
-            
+
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -1464,10 +1491,10 @@ export default function ConfigWhatsApp() {
                 Redirigiendo a Integraciones de Aplicaciones...
               </span>
             </div>
-            
+
             {fetcher.data?.shopInfo && (
-              <div style={{ 
-                fontSize: '12px', 
+              <div style={{
+                fontSize: '12px',
                 opacity: 0.8,
                 padding: '8px 12px',
                 background: 'rgba(255, 255, 255, 0.1)',
@@ -1479,7 +1506,7 @@ export default function ConfigWhatsApp() {
             )}
           </div>
         )}
-        
+
         {/* Estilos CSS adicionales */}
         <style dangerouslySetInnerHTML={{
           __html: `
@@ -1503,12 +1530,12 @@ export default function ConfigWhatsApp() {
             fontWeight: '600'
           }}>
             ❌ Error al guardar: {
-              Array.isArray(fetcher.data?.details) 
+              Array.isArray(fetcher.data?.details)
                 ? fetcher.data.details.map((error, index) => (
-                    <div key={index} style={{ margin: '4px 0' }}>
-                      {error.message || JSON.stringify(error)}
-                    </div>
-                  ))
+                  <div key={index} style={{ margin: '4px 0' }}>
+                    {error.message || JSON.stringify(error)}
+                  </div>
+                ))
                 : (fetcher.data?.details || 'Error desconocido')
             }
           </div>

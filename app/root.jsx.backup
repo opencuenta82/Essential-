@@ -1,0 +1,88 @@
+import {
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+} from "@remix-run/react";
+import { json } from "@remix-run/node";
+
+// Función simplificada de security headers
+function setSecurityHeaders(request) {
+  const headers = new Headers();
+  
+  try {
+    const url = new URL(request.url);
+    const shop = url.searchParams.get('shop');
+    
+    if (shop) {
+      // Asegurar que shop tiene el formato correcto
+      const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`;
+      const cspValue = `frame-ancestors https://${shopDomain} https://admin.shopify.com`;
+      headers.set('Content-Security-Policy', cspValue);
+      
+      console.log(`🔒 CSP set for shop: ${shopDomain}`);
+    } else {
+      headers.set('Content-Security-Policy', "frame-ancestors 'none'");
+      console.log("🔒 CSP set to 'none' - no shop parameter");
+    }
+    
+    // Headers adicionales de seguridad
+    headers.set('X-Frame-Options', 'SAMEORIGIN');
+    headers.set('X-Content-Type-Options', 'nosniff');
+    headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    headers.set('X-XSS-Protection', '1; mode=block');
+    
+    return headers;
+  } catch (error) {
+    console.error('Error setting security headers:', error);
+    // En caso de error, devolver headers básicos
+    headers.set('Content-Security-Policy', "frame-ancestors 'none'");
+    return headers;
+  }
+}
+
+export const loader = async ({ request }) => {
+  try {
+    const responseHeaders = setSecurityHeaders(request);
+    
+    return json(
+      {
+        timestamp: new Date().toISOString(),
+      },
+      {
+        headers: responseHeaders
+      }
+    );
+  } catch (error) {
+    console.error('Loader error:', error);
+    // En caso de error, devolver respuesta básica
+    return json({
+      timestamp: new Date().toISOString(),
+      error: 'Loader error'
+    });
+  }
+};
+
+export default function App() {
+  return (
+    <html>
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <link rel="preconnect" href="https://cdn.shopify.com/" />
+        <link
+          rel="stylesheet"
+          href="https://cdn.shopify.com/static/fonts/inter/v4/styles.css"
+        />
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <Outlet />
+        <ScrollRestoration />
+        <Scripts />
+      </body>
+    </html>
+  );
+}

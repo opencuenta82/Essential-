@@ -3,7 +3,7 @@
 client_id = "b79e2fb8bcb7a5671f55e60712f610c2"
 name = "Essential_v1"
 handle = "essential-v1"
-application_url = "https://essential-production.up.railway.app"
+application_url = "https://relations-physically-cookbook-tricks.trycloudflare.com"
 embedded = true
 
 [build]
@@ -13,6 +13,7 @@ include_config_on_deploy = true
 [webhooks]
 api_version = "2025-04"
 
+  # Webhooks existentes
   [[webhooks.subscriptions]]
   topics = [ "app/scopes_update" ]
   uri = "https://essential-production.up.railway.app/webhooks/app/scopes_update"
@@ -21,16 +22,42 @@ api_version = "2025-04"
   topics = [ "app/uninstalled" ]
   uri = "https://essential-production.up.railway.app/webhooks/app/uninstalled"
 
+  # ============================================
+  # GDPR WEBHOOKS OBLIGATORIOS (AÑADIDOS)
+  # ============================================
+  
+  [[webhooks.subscriptions]]
+  compliance_topics = [
+    "customers/data_request",
+    "customers/redact", 
+    "shop/redact"
+  ]
+  uri = "https://essential-production.up.railway.app/webhooks/gdpr"
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_orders,read_products,write_orders,write_products"
 
 [auth]
-redirect_urls = [
-  "https://essential-production.up.railway.app/auth/callback", 
-  "https://essential-production.up.railway.app/auth/shopify/callback", 
-  "https://essential-production.up.railway.app/api/auth/callback"
-]
+redirect_urls = ["https://relations-physically-cookbook-tricks.trycloudflare.com/auth/callback", "https://relations-physically-cookbook-tricks.trycloudflare.com/auth/shopify/callback", "https://relations-physically-cookbook-tricks.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false
+
+# ============================================
+# CONFIGURACIÓN ADICIONAL PARA APP STORE
+# ============================================
+
+# URLs de políticas legales (OBLIGATORIO para App Store)
+[privacy_compliance]
+privacy_policy_url = "https://essential-production.up.railway.app/privacy-policy"
+terms_of_service_url = "https://essential-production.up.railway.app/terms-of-service"
+
+# Información de contacto (OBLIGATORIO)
+support_email = "veriftshopift@gmail.com"
+emergency_developer_contact = "opencuenta82@gmail.com"
+
+# Configuración de desarrollo
+[development]
+tunnel_url = "https://essential-production.up.railway.app"
+store_preview_url = "https://essential-production.up.railway.app/store-preview"

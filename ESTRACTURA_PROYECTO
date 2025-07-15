@@ -1,0 +1,68 @@
+Essential/
+│
+├── 📄 package.json ← Dependencias y scripts del proyecto
+├── 📄 shopify.app.toml ← Configuración principal de Shopify App ✅
+├── 📄 .env ← Variables de entorno secretas ✅
+├── 📄 vite.config.js ← Configuración del bundler
+├── 📄 remix.config.js ← Configuración de Remix framework
+├── 📄 tsconfig.json ← Configuración de TypeScript
+├── 📄 package-lock.json ← Lock de versiones exactas ✅
+│
+├── 📁 app/ ← Aplicación principal
+│   ├── 📄 db.server.js ← Conexión a base de datos
+│   ├── 📄 entry.server.jsx ← Punto de entrada del servidor
+│   ├── 📄 root.jsx ← Componente raíz con security headers ✅
+│   ├── 📄 root.jsx.backup ← Respaldo del componente raíz
+│   ├── 📄 routes.js ← Configuración de rutas
+│   ├── 📄 shopify.server.js ← Autenticación y configuración Shopify ✅
+│   │
+│   ├── 📁 routes/ ← Rutas de la aplicación
+│   │   ├── 📄 app._index.jsx ← Página principal de la app ✅
+│   │   ├── 📄 privacy-policy.jsx ← Política de privacidad (obligatorio) ✅
+│   │   ├── 📄 terms-of-service.jsx ← Términos de servicio (obligatorio) ✅
+│   │   ├── 📄 webhooks.gdpr.jsx ← Webhooks GDPR compliance ✅
+│   │   ├── 📄 webhooks.app.scopes_update.jsx ← Webhook actualización permisos
+│   │   ├── 📄 webhooks.app.uninstalled.jsx ← Webhook desinstalación
+│   │   ├── 📄 api.whatsapp-config.tsx ← API configuración WhatsApp
+│   │   ├── 📄 auth.$.jsx ← Autenticación OAuth
+│   │   ├── 📄 test.headers.jsx ← Test de security headers
+│   │   │
+│   │   ├── 📁 aa_index/ ← Ruta conflictiva (eliminar)
+│   │   │   ├── 📄 route.jsx ← Página duplicada
+│   │   │   └── 📄 styles.module.css ← Estilos CSS
+│   │   │
+│   │   └── 📁 confgWhatsapp/ ← Configuración WhatsApp
+│   │       └── 📄 route.tsx ← Página de configuración del widget
+│   │
+│   └── 📁 utils/ ← Utilidades del servidor
+│       ├── 📄 middleware.js ← Middleware de autenticación
+│       ├── 📄 security.js ← Funciones de seguridad
+│       └── 📄 verifyHeaders.js ← Verificación de headers
+│
+├── 📁 extensions/ ← **Extensiones de Shopify** 🎯
+│   │
+│   ├── 📁 whatsapp-button/ ← Extension principal del widget
+│   │   ├── 📁 app_embeds/ ← Elementos embebidos en admin
+│   │   ├── 📁 assets/ ← Imágenes y recursos estáticos
+│   │   │   └── 📄 thumbs-up.png ← Icono del widget
+│   │   ├── 📁 blocks/ ← Bloques de tema
+│   │   │   └── 📄 whatsapp-widget.liquid ← Widget principal ✅
+│   │   ├── 📁 locales/ ← Traducciones
+│   │   │   └── 📄 en.default.json ← Textos en inglés
+│   │   ├── 📁 snippets/ ← Fragmentos reutilizables
+│   │   │   └── 📄 stars.liquid ← Snippet de estrellas
+│   │   └── 📄 shopify.extension.toml ← Configuración de extensión ✅
+│   │
+│   └── 📁 whatsapp-pixel/ ← Extension de tracking/analytics
+│       ├── 📁 dist/ ← Archivos compilados
+│       ├── 📁 src/ ← Código fuente del pixel
+│       ├── 📄 package.json ← Dependencias del pixel
+│       ├── 📄 shopify.extension.toml ← Configuración del pixel ✅
+│       └── 📄 .gitkeep ← Mantener carpeta en git
+│
+├── 📁 prisma/ ← ORM y base de datos
+│   └── 📄 schema.prisma ← Esquema de base de datos ✅
+│
+├── 📁 node_modules/ ← Dependencias instaladas ✅
+│
+└── 📄 .gitkeep ← Mantener estructura en git 

@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { useState } from "react";
 import * as React from "react";
 import { useNavigate } from "@remix-run/react";
@@ -5,6 +6,50 @@ import { useFetcher } from "@remix-run/react";
 import { ActionFunctionArgs, json } from "@remix-run/node";
 import { authenticate } from "../../shopify.server";
 
+
+// Agregar después de línea 5 (antes de la función convertTo24Hour)
+
+// Verificar HMAC de Shopify para webhooks GDPR
+function verifyShopifyWebhook(data: string, hmacHeader: string): boolean {
+  const calculated = crypto
+    .createHmac('sha256', process.env.SHOPIFY_WEBHOOK_SECRET!)
+    .update(data, 'utf8')
+    .digest('base64');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(calculated, 'base64'),
+    Buffer.from(hmacHeader, 'base64')
+  );
+}
+
+// Handler para webhooks GDPR
+export async function gdprWebhookHandler({ request }: ActionFunctionArgs) {
+  const hmacHeader = request.headers.get("X-Shopify-Hmac-Sha256");
+  const topic = request.headers.get("X-Shopify-Topic");
+  
+  if (!hmacHeader) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const body = await request.text();
+  
+  if (!verifyShopifyWebhook(body, hmacHeader)) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  // Procesar webhook según el topic
+  switch (topic) {
+    case "customers/data_request":
+    case "customers/redact":
+    case "shop/redact":
+    case "app/uninstalled":
+      // Implementar lógica GDPR
+      console.log(`GDPR webhook received: ${topic}`);
+      break;
+  }
+
+  return new Response("OK", { status: 200 });
+}
 // API ACTION para guardar configuración
 function convertTo24Hour(timeString: string): string {
 
@@ -31,7 +76,13 @@ function convertTo24Hour(timeString: string): string {
 export async function action({ request }: ActionFunctionArgs) {
   try {
     const { admin, session } = await authenticate.admin(request);
-
+ const shopDomain = session?.shop || '';
+    const cspHeaders = {
+      "Content-Security-Policy": `frame-ancestors https://${shopDomain} https://admin.shopify.com;`,
+      "X-Frame-Options": "ALLOWALL",
+      "X-Content-Type-Options": "nosniff",
+      "X-XSS-Protection": "1; mode=block"
+    };
     if (request.method !== "POST") {
       return json({ error: "Method not allowed" }, { status: 405 });
     }
@@ -245,18 +296,24 @@ export async function action({ request }: ActionFunctionArgs) {
         domain: session.shop,
         shopId: shopId
       }
-    });
+    }, { 
+      headers: cspHeaders  // AGREGAR headers aquí
+    }
+  );
 
   } catch (error) {
     console.error("💥 Error guardando configuración:", error);
     console.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace');
 
-    return json({
+      return json({
       success: false,
       error: "Error al guardar la configuración",
       details: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined
-    }, { status: 500 });
+    }, { 
+      status: 500,
+      headers: cspHeaders  // AGREGAR headers aquí
+    });
   }
 
 }
@@ -298,6 +355,24 @@ export default function ConfigWhatsApp() {
 
     if (!startMessage.trim()) {
       alert("Por favor ingresa un mensaje inicial");
+      return;
+    }
+     const sanitizedPhone = phoneNumber.replace(/[^\d]/g, '');
+    if (!sanitizedPhone || sanitizedPhone.length < 8) {
+      alert("Por favor ingresa un número de teléfono válido (mínimo 8 dígitos)");
+      return;
+    }
+
+    // Sanitizar mensaje
+    const sanitizedMessage = startMessage.trim().slice(0, 500); // Limitar a 500 caracteres
+    if (!sanitizedMessage) {
+      alert("Por favor ingresa un mensaje inicial");
+      return;
+    }
+
+    // Validar URL del logo si existe
+    if (logoUrl && logoUrl.length > 50000) {
+      alert("El logo es demasiado grande. Por favor usa una imagen más pequeña.");
       return;
     }
 

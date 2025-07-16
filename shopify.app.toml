@@ -26,7 +26,11 @@ api_version = "2025-04"
 scopes = "read_orders,read_products,write_orders,write_products"
 
 [auth]
-redirect_urls = ["https://try-betty-tf-international.trycloudflare.com/auth/callback", "https://try-betty-tf-international.trycloudflare.com/auth/shopify/callback", "https://try-betty-tf-international.trycloudflare.com/api/auth/callback"]
+redirect_urls = [
+  "https://essential-production.up.railway.app/auth/callback", 
+  "https://essential-production.up.railway.app/auth/shopify/callback", 
+  "https://essential-production.up.railway.app/api/auth/callback"
+]
 
 [pos]
 embedded = false

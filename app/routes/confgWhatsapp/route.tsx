@@ -6,10 +6,6 @@ import { useFetcher } from "@remix-run/react";
 import { ActionFunctionArgs, json } from "@remix-run/node";
 import { authenticate } from "../../shopify.server";
 
-
-// Agregar después de línea 5 (antes de la función convertTo24Hour)
-
-// Verificar HMAC de Shopify para webhooks GDPR
 function verifyShopifyWebhook(data: string, hmacHeader: string): boolean {
   const calculated = crypto
     .createHmac('sha256', process.env.SHOPIFY_WEBHOOK_SECRET!)
@@ -116,9 +112,6 @@ export async function action({ request }: ActionFunctionArgs) {
     });
 
     const formData = await request.formData();
-
-    // Extraer datos del formulario
-    // ✅ DESPUÉS (agregar estas 2 líneas)
     const config = {
       phoneNumber: String(formData.get("phoneWithCode") || "").replace(/[^\d+]/g, '').slice(0, 20),
       message: String(formData.get("startMessage") || "").trim().slice(0, 500),

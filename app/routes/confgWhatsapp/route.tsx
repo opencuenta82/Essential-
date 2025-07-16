@@ -15,7 +15,7 @@ function verifyShopifyWebhook(data: string, hmacHeader: string): boolean {
     .createHmac('sha256', process.env.SHOPIFY_WEBHOOK_SECRET!)
     .update(data, 'utf8')
     .digest('base64');
-  
+
   return crypto.timingSafeEqual(
     Buffer.from(calculated, 'base64'),
     Buffer.from(hmacHeader, 'base64')
@@ -26,13 +26,13 @@ function verifyShopifyWebhook(data: string, hmacHeader: string): boolean {
 export async function gdprWebhookHandler({ request }: ActionFunctionArgs) {
   const hmacHeader = request.headers.get("X-Shopify-Hmac-Sha256");
   const topic = request.headers.get("X-Shopify-Topic");
-  
+
   if (!hmacHeader) {
     return new Response("Unauthorized", { status: 401 });
   }
 
   const body = await request.text();
-  
+
   if (!verifyShopifyWebhook(body, hmacHeader)) {
     return new Response("Unauthorized", { status: 401 });
   }
@@ -74,27 +74,40 @@ function convertTo24Hour(timeString: string): string {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+  let cspHeaders: Record<string, string> = {}; // ← AGREGAR ESTA LÍNEA CON TIPO
+
   try {
     const { admin, session } = await authenticate.admin(request);
- const shopDomain = session?.shop || '';
-    const cspHeaders = {
+    // Mover CSP headers después de verificar sesión
+    if (!session || !session.shop) {
+      return json({
+        success: false,
+        error: "Sesión no válida"
+      }, { status: 401 });
+    }
+
+    const shopDomain = session.shop; // ← CAMBIAR session?.shop por session.shop
+    cspHeaders = { // ← CAMBIAR const por asignación
       "Content-Security-Policy": `frame-ancestors https://${shopDomain} https://admin.shopify.com;`,
       "X-Frame-Options": "ALLOWALL",
       "X-Content-Type-Options": "nosniff",
       "X-XSS-Protection": "1; mode=block"
     };
+    // CAMBIAR línea 85:
     if (request.method !== "POST") {
-      return json({ error: "Method not allowed" }, { status: 405 });
+      return json({ error: "Method not allowed" }, {
+        status: 405,
+        headers: cspHeaders  // ← AGREGAR
+      });
     }
+    const userAgent = request.headers.get("User-Agent") || "";
+    const xForwardedFor = request.headers.get("X-Forwarded-For") || "";
 
-    // Verificar que la sesión existe
-    if (!session || !session.shop) {
-      console.error("❌ Sesión no válida:", session);
-      return json({
-        success: false,
-        error: "Sesión no válida",
-        details: "No se pudo obtener la información de la tienda"
-      }, { status: 401 });
+    if (userAgent.includes("bot") || userAgent.includes("crawler")) {
+      return json({ error: "Forbidden" }, {
+        status: 403,
+        headers: cspHeaders
+      });
     }
 
     console.log("✅ Sesión válida:", {
@@ -107,18 +120,18 @@ export async function action({ request }: ActionFunctionArgs) {
     // Extraer datos del formulario
     // ✅ DESPUÉS (agregar estas 2 líneas)
     const config = {
-      phoneNumber: formData.get("phoneWithCode"),
-      message: formData.get("startMessage"),
-      position: formData.get("position"),
-      color: formData.get("color"),
-      icon: formData.get("icon"),
-      buttonStyle: formData.get("buttonStyle"),
-      logoUrl: formData.get("logoUrl"),
-      activeHours: formData.get("activeHours"),
-      startTime: formData.get("startTime"),        // ← AGREGAR
-      endTime: formData.get("endTime"),            // ← AGREGAR
-      isActive24Hours: formData.get("isActive24Hours"),
-      activeDays: formData.get("activeDays"),
+      phoneNumber: String(formData.get("phoneWithCode") || "").replace(/[^\d+]/g, '').slice(0, 20),
+      message: String(formData.get("startMessage") || "").trim().slice(0, 500),
+      position: String(formData.get("position") || "").replace(/[^a-z-]/g, ''),
+      color: String(formData.get("color") || "").replace(/[^#a-fA-F0-9]/g, ''),
+      icon: String(formData.get("icon") || "").slice(0, 5),
+      buttonStyle: String(formData.get("buttonStyle") || "").replace(/[^a-z0-9]/g, ''),
+      logoUrl: String(formData.get("logoUrl") || "").slice(0, 50000),
+      activeHours: String(formData.get("activeHours") || "").replace(/[^a-z0-9]/g, ''),
+      startTime: String(formData.get("startTime") || "").replace(/[^0-9:]/g, ''),
+      endTime: String(formData.get("endTime") || "").replace(/[^0-9:]/g, ''),
+      isActive24Hours: String(formData.get("isActive24Hours") || "false"),
+      activeDays: String(formData.get("activeDays") || "").replace(/[^a-z,]/g, ''),
     };
     console.log("Configuración recibida:", config);
 
@@ -280,7 +293,10 @@ export async function action({ request }: ActionFunctionArgs) {
         success: false,
         error: "Error al guardar metafields",
         details: result.data.metafieldsSet.userErrors
-      }, { status: 400 });
+      }, {
+        status: 400,
+        headers: cspHeaders  // ← AGREGAR ESTA LÍNEA
+      });
     }
 
     // Verificar que se guardaron los metafields
@@ -296,27 +312,28 @@ export async function action({ request }: ActionFunctionArgs) {
         domain: session.shop,
         shopId: shopId
       }
-    }, { 
+    }, {
       headers: cspHeaders  // AGREGAR headers aquí
     }
-  );
+    );
 
   } catch (error) {
     console.error("💥 Error guardando configuración:", error);
     console.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace');
 
-      return json({
+    return json({
       success: false,
       error: "Error al guardar la configuración",
       details: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined
-    }, { 
+    }, {
       status: 500,
       headers: cspHeaders  // AGREGAR headers aquí
     });
   }
 
 }
+
 declare global {
   interface Window {
     compressAndSetImage: (file: File) => void;
@@ -352,30 +369,41 @@ export default function ConfigWhatsApp() {
       alert("Por favor ingresa un número de teléfono válido");
       return;
     }
-
-    if (!startMessage.trim()) {
-      alert("Por favor ingresa un mensaje inicial");
-      return;
+    if (fetcher.data?.success) {
+      fetcher.data = undefined;
     }
-     const sanitizedPhone = phoneNumber.replace(/[^\d]/g, '');
-    if (!sanitizedPhone || sanitizedPhone.length < 8) {
-      alert("Por favor ingresa un número de teléfono válido (mínimo 8 dígitos)");
+    const sanitizedPhone = phoneNumber.replace(/[^\d]/g, '');
+    if (!sanitizedPhone || sanitizedPhone.length < 8 || sanitizedPhone.length > 15) {
+      alert("Por favor ingresa un número de teléfono válido (8-15 dígitos)");
       return;
     }
 
     // Sanitizar mensaje
-    const sanitizedMessage = startMessage.trim().slice(0, 500); // Limitar a 500 caracteres
-    if (!sanitizedMessage) {
-      alert("Por favor ingresa un mensaje inicial");
+    const sanitizedMessage = startMessage.trim().slice(0, 500);
+    if (!sanitizedMessage || sanitizedMessage.length < 5) {
+      alert("Por favor ingresa un mensaje inicial (mínimo 5 caracteres)");
       return;
     }
 
-    // Validar URL del logo si existe
+    // Validar código de país
+    const validCountryCodes = ['1', '51', '52', '54', '55', '56', '57', '58', '34'];
+    if (!validCountryCodes.includes(countryCode)) {
+      alert("Código de país no válido");
+      return;
+    }
+
+    // Validar logo
     if (logoUrl && logoUrl.length > 50000) {
       alert("El logo es demasiado grande. Por favor usa una imagen más pequeña.");
       return;
     }
 
+    // Validar color hex
+    const colorRegex = /^#[0-9A-F]{6}$/i;
+    if (!colorRegex.test(color)) {
+      alert("Color no válido");
+      return;
+    }
     // Crear objeto con datos del formulario
     const formData = new FormData();
     formData.append("phoneWithCode", countryCode + phoneNumber);
@@ -452,7 +480,27 @@ export default function ConfigWhatsApp() {
       return () => clearTimeout(redirectTimeout);
     }
   }, [fetcher.data]);
+  React.useEffect(() => {
+    if (fetcher.data?.success) {
+      // Resetear todos los estados del formulario después de éxito
+      setTimeout(() => {
+        setPosition("bottom-right");
+        setColor("#25D366");
+        setIcon("💬");
+        setCountryCode("51");
+        setPhoneNumber("999999999");
+        setStartMessage("¡Hola! Me interesa tu producto");
+        setButtonStyle("style1");
+        setLogoUrl("");
+        setIsActive24Hours(true);
+        setStartTime("09:00");
+        setEndTime("18:00");
+        setActiveDays("monday,tuesday,wednesday,thursday,friday");
 
+        console.log("🔄 Formulario reseteado correctamente");
+      }, 3000); // Después de 3 segundos del éxito
+    }
+  }, [fetcher.data?.success]);
   // Mostrar estado de envío
   const isSubmitting = fetcher.state === "submitting";
   const isSuccess = fetcher.data?.success;

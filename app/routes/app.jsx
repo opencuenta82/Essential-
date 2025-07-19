@@ -4,13 +4,31 @@ import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import { authenticate } from "../shopify.server";
+import { json } from "@remix-run/node";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
 
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  // 🛡️ SECURITY HEADERS - Obtener shop parameter
+  const url = new URL(request.url);
+  const shop = url.searchParams.get("shop");
+
+  // Configurar headers de seguridad
+  const headers = {};
+  if (shop) {
+    headers["Content-Security-Policy"] = 
+      `frame-ancestors https://${shop} https://admin.shopify.com`;
+  } else {
+    headers["Content-Security-Policy"] = "frame-ancestors 'none'";
+  }
+
+  const data = { 
+    apiKey: process.env.SHOPIFY_API_KEY || "" 
+  };
+
+  return json(data, { headers });
 };
 
 export default function App() {

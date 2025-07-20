@@ -11,24 +11,13 @@ export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
 
-  // 🛡️ SECURITY HEADERS - Obtener shop parameter
-  const url = new URL(request.url);
-  const shop = url.searchParams.get("shop");
-
-  // Configurar headers de seguridad
-  const headers = {};
-  if (shop) {
-    headers["Content-Security-Policy"] = 
-      `frame-ancestors https://${shop} https://admin.shopify.com`;
-  } else {
-    headers["Content-Security-Policy"] = "frame-ancestors 'none'";
-  }
-
+  // 🛡️ Los Security Headers ahora se manejan en entry.server.tsx
+  // Ya no necesitamos configurarlos manualmente aquí
   const data = { 
     apiKey: process.env.SHOPIFY_API_KEY || "" 
   };
 
-  return json(data, { headers });
+  return json(data);
 };
 
 export default function App() {

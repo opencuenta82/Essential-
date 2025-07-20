@@ -19,8 +19,25 @@ export const action = async ({ request }) => {
     const shopDomain = request.headers.get("x-shopify-shop-domain");
     const hmac = request.headers.get("x-shopify-hmac-sha256");
     
-    // Obtener el body del webhook
-    const body = await request.json();
+    // Obtener el body como texto para verificar HMAC
+    const bodyText = await request.text();
+    
+    // ⚡ CRÍTICO: Verificar HMAC
+    if (hmac && process.env.SHOPIFY_API_SECRET) {
+      const crypto = require('crypto');
+      const calculatedHmac = crypto
+        .createHmac('sha256', process.env.SHOPIFY_API_SECRET)
+        .update(bodyText, 'utf8')
+        .digest('base64');
+      
+      if (hmac !== calculatedHmac) {
+        console.log("❌ HMAC verification failed");
+        return json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+    
+    // Convertir el body a JSON después de verificar HMAC
+    const body = JSON.parse(bodyText);
     
     console.log(`🔒 GDPR Webhook recibido: ${topic}`, {
       shop: shopDomain,

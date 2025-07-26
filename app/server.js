@@ -1,4 +1,4 @@
-// server.js - Servidor personalizado COMPLETO para Railway con HMAC FIX
+// server.js - Servidor personalizado COMPLETO para Railway con HMAC FIX DEFINITIVO
 import { createRequestHandler } from "@remix-run/express";
 import express from "express";
 import { fileURLToPath } from "url";
@@ -9,26 +9,43 @@ const __dirname = dirname(__filename);
 
 const app = express();
 
-// 🚨 CRÍTICO: Configurar trust proxy para Railway (NUEVO)
+// 🚨 CRÍTICO: Configurar trust proxy para Railway
 app.set('trust proxy', 1);
 
-// 🔒 MIDDLEWARE RAW BODY PARA WEBHOOKS (NUEVO - DEBE IR ANTES DE TODO)
+// 🔒 MIDDLEWARE RAW BODY PARA WEBHOOKS (DEBE IR ANTES DE TODO)
 app.use('/webhooks', express.raw({
   type: ['application/json', 'text/plain'],
   limit: '10mb',
   verify: (req, res, buf, encoding) => {
     // Guardar el raw body para verificación HMAC
-    req.rawBody = buf;
+    req.rawBody = buf.toString('utf8');
     console.log('🔍 [RAW BODY CAPTURADO]:', {
       length: buf.length,
       encoding: encoding,
       url: req.url,
-      preview: buf.toString('utf8').substring(0, 100)
+      preview: req.rawBody.substring(0, 100)
     });
   }
 }));
 
-// 🛡️ MIDDLEWARE DE SECURITY HEADERS - LA SOLUCIÓN DEFINITIVA
+// 🚨 CRÍTICO: JSON parsing SOLO para rutas NO-webhook
+app.use((req, res, next) => {
+  if (req.url.startsWith('/webhooks')) {
+    console.log('🔒 [WEBHOOK] Skipping JSON parsing for:', req.url);
+    return next(); // Skip JSON parsing for webhooks
+  }
+  express.json({ limit: '50mb' })(req, res, next);
+});
+
+// 🚨 CRÍTICO: URL encoded SOLO para rutas NO-webhook  
+app.use((req, res, next) => {
+  if (req.url.startsWith('/webhooks')) {
+    return next(); // Skip URL encoded parsing for webhooks
+  }
+  express.urlencoded({ extended: true, limit: '50mb' })(req, res, next);
+});
+
+// 🛡️ MIDDLEWARE DE SECURITY HEADERS
 app.use((req, res, next) => {
   const shop = req.query.shop;
   const url = req.url;
@@ -39,8 +56,8 @@ app.use((req, res, next) => {
     shop: shop,
     method: method,
     userAgent: req.headers['user-agent']?.substring(0, 50),
-    isWebhook: url.startsWith('/webhooks'), // NUEVO
-    hasRawBody: !!req.rawBody // NUEVO
+    isWebhook: url.startsWith('/webhooks'),
+    hasRawBody: !!req.rawBody
   });
   
   // Detectar si es un request HTML (páginas de la app)
@@ -49,22 +66,17 @@ app.use((req, res, next) => {
      req.headers.accept.includes('*/*'));
   
   // Solo aplicar CSP headers para requests HTML (NO para webhooks)
-  if (isHtmlRequest && !url.startsWith('/webhooks')) { // MODIFICADO
+  if (isHtmlRequest && !url.startsWith('/webhooks')) {
     if (shop && shop.includes('.myshopify.com')) {
-      // ✅ SOLUCIÓN OFICIAL SHOPIFY: Headers dinámicos
       const cspHeader = `frame-ancestors https://${shop} https://admin.shopify.com`;
       res.setHeader('Content-Security-Policy', cspHeader);
-      
       console.log("🛡️ [CSP APLICADO]:", cspHeader);
     } else if (shop) {
-      // Si shop no tiene .myshopify.com, agregarlo
       const shopDomain = shop.includes('.myshopify.com') ? shop : `${shop}.myshopify.com`;
       const cspHeader = `frame-ancestors https://${shopDomain} https://admin.shopify.com`;
       res.setHeader('Content-Security-Policy', cspHeader);
-      
       console.log("🛡️ [CSP APLICADO - NORMALIZADO]:", cspHeader);
     } else {
-      // Para requests sin shop parameter
       res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
       console.log("🛡️ [CSP APLICADO - NONE]");
     }
@@ -75,7 +87,6 @@ app.use((req, res, next) => {
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('X-XSS-Protection', '1; mode=block');
   } else {
-    // Para requests JSON/API (como webhooks)
     console.log("📡 [API REQUEST] No aplicando CSP headers");
   }
   
@@ -86,7 +97,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🔍 MIDDLEWARE DE DEBUGGING ESPECÍFICO PARA WEBHOOKS (NUEVO)
+// 🔍 MIDDLEWARE DE DEBUGGING ESPECÍFICO PARA WEBHOOKS
 app.use('/webhooks', (req, res, next) => {
   console.log('🔍 [WEBHOOK DEBUG]:', {
     url: req.url,
@@ -112,7 +123,7 @@ app.use((req, res, next) => {
   res.send = function(body) {
     console.log("📤 [RESPONSE HEADERS FINALES]:", {
       url: req.url,
-      status: res.statusCode, // NUEVO
+      status: res.statusCode,
       headers: Object.fromEntries(Object.entries(res.getHeaders()))
     });
     return originalSend.call(this, body);
@@ -121,7 +132,7 @@ app.use((req, res, next) => {
   res.json = function(body) {
     console.log("📤 [RESPONSE JSON HEADERS]:", {
       url: req.url,
-      status: res.statusCode, // NUEVO
+      status: res.statusCode,
       headers: Object.fromEntries(Object.entries(res.getHeaders()))
     });
     return originalJson.call(this, body);
@@ -130,15 +141,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware para parsear JSON (DESPUÉS del raw body middleware)
-app.use(express.json({ limit: '50mb' })); // MODIFICADO: límite aumentado
-app.use(express.urlencoded({ extended: true, limit: '50mb' })); // MODIFICADO: límite aumentado
-
 // Servir archivos estáticos del build
 app.use(express.static(join(__dirname, "build/client"), {
   maxAge: "1y",
   setHeaders: (res, path) => {
-    // Agregar headers de cache para assets estáticos
     if (path.endsWith('.js') || path.endsWith('.css')) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
@@ -157,28 +163,27 @@ app.all("*", (req, res, next) => {
     url: req.url,
     method: req.method,
     shop: req.query.shop,
-    hasRawBody: !!req.rawBody // NUEVO
+    hasRawBody: !!req.rawBody
   });
   
   return remixHandler(req, res, next);
 });
 
-// 🔧 MANEJO DE ERRORES (MOVIDO AL FINAL Y MEJORADO)
+// 🔧 MANEJO DE ERRORES (DEBE SER EL ÚLTIMO)
 app.use((err, req, res, next) => {
   console.error("❌ [SERVER ERROR]:", {
     error: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : '[HIDDEN]', // MODIFICADO
+    stack: process.env.NODE_ENV === 'development' ? err.stack : '[HIDDEN]',
     url: req.url,
     method: req.method,
-    isWebhook: req.url.startsWith('/webhooks') // NUEVO
+    isWebhook: req.url.startsWith('/webhooks')
   });
   
-  // No enviar respuesta si ya se enviaron headers (NUEVO)
   if (!res.headersSent) {
     const statusCode = err.statusCode || err.status || 500;
     res.status(statusCode).json({
       error: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error',
-      timestamp: new Date().toISOString() // NUEVO
+      timestamp: new Date().toISOString()
     });
   }
 });
@@ -187,7 +192,7 @@ app.use((err, req, res, next) => {
 const port = process.env.PORT || 3000;
 const host = process.env.HOST || '0.0.0.0';
 
-const server = app.listen(port, host, () => { // MODIFICADO: guardar referencia del server
+const server = app.listen(port, host, () => {
   console.log(`
 🚀 ===================================================
    ESSENTIAL SHOPIFY APP - SERVIDOR RAILWAY INICIADO
@@ -197,20 +202,15 @@ const server = app.listen(port, host, () => { // MODIFICADO: guardar referencia 
 🛡️ Security Headers: ✅ CONFIGURADOS
 🔧 Trust Proxy: ✅ HABILITADO para Railway
 🔒 Raw Body Middleware: ✅ ACTIVO para webhooks
+🚨 JSON Parsing: ✅ DESHABILITADO para webhooks
 📊 Environment: ${process.env.NODE_ENV || 'development'}
 🎯 Framework: Remix + Express + Railway
 💡 Status: ✅ LISTO PARA PRODUCCIÓN
 
-🛡️ Security Headers incluidos:
-   - Content-Security-Policy (dinámico por tienda)
-   - X-Frame-Options
-   - X-Content-Type-Options  
-   - Referrer-Policy
-   - X-XSS-Protection
-
 🔒 Webhook HMAC Fix aplicado:
    - Trust Proxy ✅
    - Raw Body Capture ✅
+   - JSON Parsing Bypass ✅
    - Debug Logging ✅
    - Error Handling mejorado ✅
 
@@ -219,7 +219,7 @@ const server = app.listen(port, host, () => { // MODIFICADO: guardar referencia 
   `);
 });
 
-// 🔄 GRACEFUL SHUTDOWN (NUEVO)
+// 🔄 GRACEFUL SHUTDOWN
 process.on('SIGTERM', () => {
   console.log('🔄 SIGTERM received, shutting down gracefully');
   server.close(() => {

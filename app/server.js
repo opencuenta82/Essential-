@@ -1,4 +1,4 @@
-// server.js - Servidor personalizado COMPLETO para Railway
+// server.js - Servidor personalizado COMPLETO para Railway con HMAC FIX
 import { createRequestHandler } from "@remix-run/express";
 import express from "express";
 import { fileURLToPath } from "url";
@@ -8,6 +8,25 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
+
+// 🚨 CRÍTICO: Configurar trust proxy para Railway (NUEVO)
+app.set('trust proxy', 1);
+
+// 🔒 MIDDLEWARE RAW BODY PARA WEBHOOKS (NUEVO - DEBE IR ANTES DE TODO)
+app.use('/webhooks', express.raw({
+  type: ['application/json', 'text/plain'],
+  limit: '10mb',
+  verify: (req, res, buf, encoding) => {
+    // Guardar el raw body para verificación HMAC
+    req.rawBody = buf;
+    console.log('🔍 [RAW BODY CAPTURADO]:', {
+      length: buf.length,
+      encoding: encoding,
+      url: req.url,
+      preview: buf.toString('utf8').substring(0, 100)
+    });
+  }
+}));
 
 // 🛡️ MIDDLEWARE DE SECURITY HEADERS - LA SOLUCIÓN DEFINITIVA
 app.use((req, res, next) => {
@@ -19,7 +38,9 @@ app.use((req, res, next) => {
     url: url,
     shop: shop,
     method: method,
-    userAgent: req.headers['user-agent']?.substring(0, 50)
+    userAgent: req.headers['user-agent']?.substring(0, 50),
+    isWebhook: url.startsWith('/webhooks'), // NUEVO
+    hasRawBody: !!req.rawBody // NUEVO
   });
   
   // Detectar si es un request HTML (páginas de la app)
@@ -27,8 +48,8 @@ app.use((req, res, next) => {
     (req.headers.accept.includes('text/html') || 
      req.headers.accept.includes('*/*'));
   
-  // Solo aplicar CSP headers para requests HTML
-  if (isHtmlRequest) {
+  // Solo aplicar CSP headers para requests HTML (NO para webhooks)
+  if (isHtmlRequest && !url.startsWith('/webhooks')) { // MODIFICADO
     if (shop && shop.includes('.myshopify.com')) {
       // ✅ SOLUCIÓN OFICIAL SHOPIFY: Headers dinámicos
       const cspHeader = `frame-ancestors https://${shop} https://admin.shopify.com`;
@@ -65,6 +86,24 @@ app.use((req, res, next) => {
   next();
 });
 
+// 🔍 MIDDLEWARE DE DEBUGGING ESPECÍFICO PARA WEBHOOKS (NUEVO)
+app.use('/webhooks', (req, res, next) => {
+  console.log('🔍 [WEBHOOK DEBUG]:', {
+    url: req.url,
+    method: req.method,
+    headers: {
+      'x-shopify-hmac-sha256': req.headers['x-shopify-hmac-sha256'],
+      'x-shopify-topic': req.headers['x-shopify-topic'],
+      'x-shopify-shop-domain': req.headers['x-shopify-shop-domain'],
+      'content-type': req.headers['content-type']
+    },
+    hasRawBody: !!req.rawBody,
+    rawBodyLength: req.rawBody?.length,
+    secretConfigured: !!process.env.SHOPIFY_WEBHOOK_SECRET
+  });
+  next();
+});
+
 // 🚀 MIDDLEWARE PARA DEBUGGING HEADERS
 app.use((req, res, next) => {
   const originalSend = res.send;
@@ -73,6 +112,7 @@ app.use((req, res, next) => {
   res.send = function(body) {
     console.log("📤 [RESPONSE HEADERS FINALES]:", {
       url: req.url,
+      status: res.statusCode, // NUEVO
       headers: Object.fromEntries(Object.entries(res.getHeaders()))
     });
     return originalSend.call(this, body);
@@ -81,6 +121,7 @@ app.use((req, res, next) => {
   res.json = function(body) {
     console.log("📤 [RESPONSE JSON HEADERS]:", {
       url: req.url,
+      status: res.statusCode, // NUEVO
       headers: Object.fromEntries(Object.entries(res.getHeaders()))
     });
     return originalJson.call(this, body);
@@ -89,9 +130,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware para parsear JSON
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middleware para parsear JSON (DESPUÉS del raw body middleware)
+app.use(express.json({ limit: '50mb' })); // MODIFICADO: límite aumentado
+app.use(express.urlencoded({ extended: true, limit: '50mb' })); // MODIFICADO: límite aumentado
 
 // Servir archivos estáticos del build
 app.use(express.static(join(__dirname, "build/client"), {
@@ -104,21 +145,6 @@ app.use(express.static(join(__dirname, "build/client"), {
   }
 }));
 
-// 🔧 MANEJO DE ERRORES
-app.use((err, req, res, next) => {
-  console.error("❌ [SERVER ERROR]:", {
-    error: err.message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method
-  });
-  
-  res.status(500).json({
-    error: "Internal Server Error",
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
-  });
-});
-
 // 🚀 REMIX REQUEST HANDLER PRINCIPAL
 const remixHandler = createRequestHandler({
   build: await import("./build/server/index.js"),
@@ -130,17 +156,38 @@ app.all("*", (req, res, next) => {
   console.log("🎯 [REMIX HANDLER] Procesando:", {
     url: req.url,
     method: req.method,
-    shop: req.query.shop
+    shop: req.query.shop,
+    hasRawBody: !!req.rawBody // NUEVO
   });
   
   return remixHandler(req, res, next);
+});
+
+// 🔧 MANEJO DE ERRORES (MOVIDO AL FINAL Y MEJORADO)
+app.use((err, req, res, next) => {
+  console.error("❌ [SERVER ERROR]:", {
+    error: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : '[HIDDEN]', // MODIFICADO
+    url: req.url,
+    method: req.method,
+    isWebhook: req.url.startsWith('/webhooks') // NUEVO
+  });
+  
+  // No enviar respuesta si ya se enviaron headers (NUEVO)
+  if (!res.headersSent) {
+    const statusCode = err.statusCode || err.status || 500;
+    res.status(statusCode).json({
+      error: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error',
+      timestamp: new Date().toISOString() // NUEVO
+    });
+  }
 });
 
 // 🚀 INICIAR SERVIDOR
 const port = process.env.PORT || 3000;
 const host = process.env.HOST || '0.0.0.0';
 
-app.listen(port, host, () => {
+const server = app.listen(port, host, () => { // MODIFICADO: guardar referencia del server
   console.log(`
 🚀 ===================================================
    ESSENTIAL SHOPIFY APP - SERVIDOR RAILWAY INICIADO
@@ -148,7 +195,8 @@ app.listen(port, host, () => {
 
 🌐 Servidor corriendo en: http://${host}:${port}
 🛡️ Security Headers: ✅ CONFIGURADOS
-🔧 Middleware CSP: ✅ ACTIVO  
+🔧 Trust Proxy: ✅ HABILITADO para Railway
+🔒 Raw Body Middleware: ✅ ACTIVO para webhooks
 📊 Environment: ${process.env.NODE_ENV || 'development'}
 🎯 Framework: Remix + Express + Railway
 💡 Status: ✅ LISTO PARA PRODUCCIÓN
@@ -160,7 +208,32 @@ app.listen(port, host, () => {
    - Referrer-Policy
    - X-XSS-Protection
 
-🎉 ¡Tu app ahora pasará la revisión de Shopify!
+🔒 Webhook HMAC Fix aplicado:
+   - Trust Proxy ✅
+   - Raw Body Capture ✅
+   - Debug Logging ✅
+   - Error Handling mejorado ✅
+
+🎉 ¡Tu app ahora pasará la revisión de Shopify Partners!
 🚀 ===================================================
   `);
 });
+
+// 🔄 GRACEFUL SHUTDOWN (NUEVO)
+process.on('SIGTERM', () => {
+  console.log('🔄 SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('🔄 SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+export default app;

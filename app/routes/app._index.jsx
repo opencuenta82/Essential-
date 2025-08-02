@@ -105,15 +105,11 @@ export default function Index() {
     }
   }, [productId, shopify]);
 
-  const generateProduct = () => fetcher.submit({}, { method: "POST" });
   const goToWhatsAppCreator = () => navigate("/confgWhatsapp");
 
   return (
     <Page>
       <TitleBar title="Essential WhatsApp Widget">
-        <button variant="primary" onClick={generateProduct}>
-          Generar producto de prueba
-        </button>
       </TitleBar>
       <BlockStack gap="500">
         <Layout>
@@ -310,204 +306,11 @@ export default function Index() {
                   </div>
                 </BlockStack>
 
-                {/* Demo de productos */}
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingMd">
-                    🧪 Área de Pruebas - GraphQL Demo
-                  </Text>
-                  <Text as="p" variant="bodyMd">
-                    Prueba la conexión con la API de Shopify generando un producto de ejemplo. 
-                    Explora más sobre la mutación{" "}
-                    <Link
-                      url="https://shopify.dev/docs/api/admin-graphql/latest/mutations/productCreate"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      productCreate
-                    </Link>{" "}
-                    en nuestra referencia de API.
-                  </Text>
-                </BlockStack>
-                <InlineStack gap="300">
-                  <Button loading={isLoading} onClick={generateProduct} tone="critical">
-                    Generar producto de prueba
-                  </Button>
-                  {fetcher.data?.product && (
-                    <Button
-                      url={`shopify:admin/products/${productId}`}
-                      target="_blank"
-                      variant="plain"
-                    >
-                      Ver producto creado
-                    </Button>
-                  )}
-                </InlineStack>
-                {fetcher.data?.product && (
-                  <>
-                    <Text as="h3" variant="headingMd">
-                      📊 Resultado de la mutación productCreate
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0, fontSize: '12px' }}>
-                        <code>
-                          {JSON.stringify(fetcher.data.product, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
-                    <Text as="h3" variant="headingMd">
-                      🔄 Resultado de la mutación productVariantsBulkUpdate
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0, fontSize: '12px' }}>
-                        <code>
-                          {JSON.stringify(fetcher.data.variant, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
-                  </>
-                )}
+              
               </BlockStack>
             </Card>
           </Layout.Section>
-          <Layout.Section variant="oneThird">
-            <BlockStack gap="500">
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    🛠️ Especificaciones Técnicas
-                  </Text>
-                  <BlockStack gap="200">
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Framework
-                      </Text>
-                      <Link
-                        url="https://remix.run"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Remix
-                      </Link>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Base de Datos
-                      </Text>
-                      <Link
-                        url="https://www.prisma.io/"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Prisma
-                      </Link>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Interfaz
-                      </Text>
-                      <span>
-                        <Link
-                          url="https://polaris.shopify.com"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          Polaris
-                        </Link>
-                        {", "}
-                        <Link
-                          url="https://shopify.dev/docs/apps/tools/app-bridge"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          App Bridge
-                        </Link>
-                      </span>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        API
-                      </Text>
-                      <Link
-                        url="https://shopify.dev/docs/api/admin-graphql"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        GraphQL API
-                      </Link>
-                    </InlineStack>
-                  </BlockStack>
-                </BlockStack>
-              </Card>
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    🎯 Siguientes Pasos
-                  </Text>
-                  <List>
-                    <List.Item>
-                      <strong>¡Comienza ahora!</strong>{" "}
-                      <Link
-                        url="/confgWhatsapp"
-                        removeUnderline
-                      >
-                        Crea tu primer botón de WhatsApp
-                      </Link>
-                    </List.Item>
-                    <List.Item>
-                      Explora la API de Shopify con{" "}
-                      <Link
-                        url="https://shopify.dev/docs/apps/tools/graphiql-admin-api"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        GraphiQL
-                      </Link>
-                    </List.Item>
-                    <List.Item>
-                      Lee la{" "}
-                      <Link
-                        url="https://shopify.dev/docs/apps/getting-started/build-app-example"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        documentación oficial
-                      </Link>{" "}
-                      de Shopify Apps
-                    </List.Item>
-                  </List>
-                </BlockStack>
-              </Card>
-              
-              {/* Nueva tarjeta de ayuda */}
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    💡 ¿Necesitas Ayuda?
-                  </Text>
-                  <Text variant="bodyMd" as="p">
-                    Si tienes alguna pregunta o necesitas soporte, no dudes en contactarnos.
-                  </Text>
-                  <Button variant="plain" tone="critical">
-                    📧 Contactar Soporte
-                  </Button>
-                </BlockStack>
-              </Card>
-            </BlockStack>
-          </Layout.Section>
+       
         </Layout>
       </BlockStack>
     </Page>
